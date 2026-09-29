@@ -1,0 +1,9 @@
+[project]
+name = "runanchor"
+version = "0.1.0"
+description = "Verification and approval gate for coding-agent runs"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["app/tests"]
+pythonpath = ["app"]

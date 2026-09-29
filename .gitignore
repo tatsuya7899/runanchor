@@ -17,12 +17,16 @@ Thumbs.db
 node_modules/
 .venv/
 __pycache__/
+.pytest_cache/
 *.pyc
 dist/
 build/
 .next/
 coverage/
 *.log
+
+# runanchor runtime artifacts (台帳はローカル生成物)
+state/
 
 # generated reports (作業用生成物 — 提出物として置く場合は個別に判断)
 readiness-report.json
