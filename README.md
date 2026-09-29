@@ -1,5 +1,7 @@
 # runanchor
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 **CI distrusts artifacts. Nothing distrusts an agent's *report*.**
 
 runanchor is a verification and approval gate for coding-agent runs. When an

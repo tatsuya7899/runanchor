@@ -121,7 +121,7 @@ Input: bd/IDEA-runanchor_premises.md(v1.3・Gate 0承認済み)
 
 ## 追補1(2026-09-29・Gate 1独立レビュー反映)
 
-審査: `bd/review-dtf-result_20260929.md`(subagent_explore委任・2分割) — 統合判定「追補」。P0×2・P1×15を受理し、以下を追記する(本文は変更しない)。
+審査: `bd/review-dtf-result_runanchor_20260929.md`(subagent_explore委任・2分割) — 統合判定「追補」。P0×2・P1×15を受理し、以下を追記する(本文は変更しない)。
 
 ### バイアス表への追加
 

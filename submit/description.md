@@ -53,7 +53,7 @@ never silently disappears.
 
 ```bash
 python3 -m runanchor.cli --ledger /tmp/demo.jsonl demo   # offline walkthrough
-python3 scripts/verify.py                              # 94-test suite, no network
+python3 scripts/verify.py                              # 97-test suite, no network
 ```
 
 `demo` replays recorded sandbox operations end-to-end with no credentials —

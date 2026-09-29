@@ -45,7 +45,7 @@
 - `app/corpus/`(35件)・生成=`scripts/build_corpus.py`・検証=`scripts/check_corpus.py`
 - 提出物: `README.md`・`submit/`・`docs/architecture.svg`・`LICENSE`(MIT)
 - ゲート: `scripts/verify.py`・`scripts/ready.py`・`scripts/record_demo.py`
-- 設計記録: `bd/SPEC-runanchor_*`・`bd/review-*-result_20260929.md`・`research/`
+- 設計記録: `bd/SPEC-runanchor_*`・`bd/review-*-result_runanchor_20260929.md`・`research/`
 
 ## 委任経緯の記録
 
