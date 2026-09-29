@@ -129,6 +129,10 @@ class DemoDriver:
         self._events = event_map or {}
         self.current_image: str | None = None
 
+    @property
+    def remaining(self) -> int:
+        return len(self._ops)
+
     @classmethod
     def from_dir(cls, path) -> "DemoDriver":
         d = Path(path)

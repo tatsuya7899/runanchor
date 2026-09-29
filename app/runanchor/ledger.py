@@ -52,8 +52,27 @@ class Ledger:
         self._append(updated.to_dict())
         return updated
 
+    def mark_unresolved(self, receipt_id: str) -> Receipt:
+        """Flag a receipt whose agent loop ended without reaching green."""
+        current = self.get(receipt_id)
+        if current is None:
+            raise KeyError(receipt_id)
+        updated = replace(current, unresolved=True)
+        self._append(updated.to_dict())
+        return updated
+
     def get(self, receipt_id: str) -> Receipt | None:
         return self._index().get(receipt_id)
+
+    def resolve(self, id_or_prefix: str) -> Receipt | None:
+        """Exact id or unique 8+ char prefix -> receipt. Raises on ambiguity."""
+        exact = self.get(id_or_prefix)
+        if exact:
+            return exact
+        hits = [r for r in self.all() if r.receipt_id.startswith(id_or_prefix)]
+        if len(hits) > 1:
+            raise ValueError(f"ambiguous receipt id prefix: {id_or_prefix}")
+        return hits[0] if hits else None
 
     def all(self) -> list[Receipt]:
         return list(self._index().values())

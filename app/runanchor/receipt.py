@@ -68,6 +68,7 @@ class Receipt:
     state: str = "pending"
     decision: dict | None = None
     demo: bool = False
+    unresolved: bool = False  # True when the agent loop gave up without green
 
     def to_dict(self) -> dict:
         return asdict(self)

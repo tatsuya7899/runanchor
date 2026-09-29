@@ -1,0 +1,1 @@
+{"demo-op-1": [{"kind": "exec", "detail": "pytest -q"}, {"kind": "exit", "code": 1}], "demo-op-2": [{"kind": "exec", "detail": "pytest -q"}, {"kind": "exit", "code": 1}], "demo-op-3": [{"kind": "exec", "detail": "pytest -q"}, {"kind": "exit", "code": 0}]}

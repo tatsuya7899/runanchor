@@ -1,0 +1,92 @@
+"""Acceptance S2/S3/S4/S7 at the CLI level: list/show/approve/reject/demo."""
+
+import json
+from pathlib import Path
+
+import pytest
+
+from runanchor.cli import main
+from runanchor.ledger import Ledger
+from runanchor.receipt import OperationRecord, issue_receipt
+
+
+def op(uuid="op-1"):
+    return OperationRecord(
+        operation_uuid=uuid, image_uuid="img-a", result_image_uuid="img-b",
+        command="pytest -q", cwd="/work", shell_mode=False, status="SUCCESS",
+        exit_code=0, stdout="1 passed\n", stderr="",
+    )
+
+
+@pytest.fixture
+def ledger_path(tmp_path):
+    p = tmp_path / "state" / "receipts.jsonl"
+    ledger = Ledger(p)
+    for i in range(2):
+        ledger.append_receipt(issue_receipt(op(f"op-{i}"), task="t", run_seq=i + 1))
+    return p
+
+
+def test_list_shows_pending_receipts(ledger_path, capsys):
+    assert main(["--ledger", str(ledger_path), "list"]) == 0
+    out = capsys.readouterr().out
+    assert "pending" in out
+    assert "t" in out
+
+
+def test_show_displays_receipt_fields(ledger_path, capsys):
+    """S2: show displays the evidence fields."""
+    rid = Ledger(ledger_path).all()[0].receipt_id
+    assert main(["--ledger", str(ledger_path), "show", rid[:8]]) == 0  # prefix ok
+    out = capsys.readouterr().out
+    for needle in ("pytest -q", "op-0", "exit", "issued_at"):
+        assert needle in out
+
+
+def test_approve_via_cli(ledger_path, capsys):
+    rid = Ledger(ledger_path).all()[0].receipt_id
+    assert main(["--ledger", str(ledger_path), "approve", rid]) == 0
+    assert Ledger(ledger_path).get(rid).state == "adopted"
+
+
+def test_reject_via_cli_requires_reason(ledger_path, capsys):
+    rid = Ledger(ledger_path).all()[0].receipt_id
+    rc = main(["--ledger", str(ledger_path), "reject", rid, "--reason", ""])
+    assert rc != 0
+    assert Ledger(ledger_path).get(rid).state == "pending"
+
+
+def test_reject_via_cli_records_reason(ledger_path):
+    rid = Ledger(ledger_path).all()[0].receipt_id
+    assert main(["--ledger", str(ledger_path), "reject", rid, "--reason", "stale log"]) == 0
+    assert Ledger(ledger_path).get(rid).decision["reason"] == "stale log"
+
+
+def test_demo_runs_offline(tmp_path, capsys, monkeypatch):
+    """S7: demo mode needs no credentials and never reaches the network."""
+    for var in ("NEBIUS_API_KEY", "CONTREE_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
+    rc = main(["--ledger", str(tmp_path / "demo.jsonl"), "demo"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "DEMO" in out
+    assert "adopted" in out or "rejected" in out
+
+
+def test_verify_demo_receipt(tmp_path, capsys):
+    """verify against the demo fixture driver -> match (S5 demo path)."""
+    ledger_path = tmp_path / "demo.jsonl"
+    assert main(["--ledger", str(ledger_path), "demo"]) == 0
+    capsys.readouterr()
+    ledger = Ledger(ledger_path)
+    green = [r for r in ledger.all() if r.exit_code == 0][0]
+    assert main(["--ledger", str(ledger_path), "verify", green.receipt_id, "--driver", "demo"]) == 0
+    out = capsys.readouterr().out
+    assert "match" in out
+
+
+def test_run_without_credentials_fails_cleanly(tmp_path, capsys, monkeypatch):
+    monkeypatch.delenv("NEBIUS_API_KEY", raising=False)
+    rc = main(["--ledger", str(tmp_path / "l.jsonl"), "run", "fix the bug"])
+    assert rc != 0
+    assert "NEBIUS_API_KEY" in capsys.readouterr().out
