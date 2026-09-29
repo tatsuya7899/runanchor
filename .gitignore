@@ -1,0 +1,28 @@
+# secrets — repo内に環境変数を置かない
+.env
+.env.*
+*.pem
+*.key
+**/credentials*.json
+**/service-account*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# build artifacts
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+dist/
+build/
+.next/
+coverage/
+*.log
+
+# generated reports (作業用生成物 — 提出物として置く場合は個別に判断)
+readiness-report.json
