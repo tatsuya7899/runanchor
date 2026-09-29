@@ -52,7 +52,7 @@
 - ハッカソン要件(提出物の形・Devpost公式 2026-09-29確認): 公開OSSリポ+README(セットアップ手順・Nemotron/Token Factoryの使いどころ明記)・**OSIライセンスをリポ最上段に表示(Apache-2.0/MIT/MPL等)**・「working demo=URL to a working demo, hosted application, **or test build**」(test buildで可・本トラックでは必須)・3分以内の公開YouTube動画(音声でToken Factory+NVIDIA OSSモデルの使用を説明)・**Token Factory/NVIDIAツールへのfeedback記述**(提出項目・別賞あり)・NVIDIAオープンソースモデルをToken FactoryまたはNebius AI Cloudで使用
 - 審査基準4軸(公式): Technological Implementation(作りの質+Token Factory/Nemotronの効果的な使用) / Design(技術PoCでない一貫した製品体験) / Potential Impact(実在の問題・実在の客への具体的説得力) / Quality of the Idea(非自明な使い方+問題領域の理解)
 - 実行基盤: Token Factory Sandboxes(ConTree)が、実行ごとにoperation UUID・開始/終了image識別子・実行イベント列・消費リソースをプロバイダ記録として発行する(コード・docsで項目の実在を確認済み・`contree run`の実実行検証はメンテナンス明けに実施)
-- 予算: 提供クレジット内($25適用済み・Builders Program参加で追加$25の道あり)
+- 予算: **提供クレジット残高が上限・追加課金は一切しない**(2026-09-29決定)。$25適用済み・Builders Program参加で追加$25の道あり。サンドボックス実行・モデル推論・再検証を含む全外部実行は残クレジット内に収める設計とし、初回実行で単価を実測してから以降の実行計画を立てる
 - 締切: 2026-10-30 10:00 PDT(約10/31 02:00 JST)
 - 先行技術との差分(前提整理確定): プロバイダ発行アンカー・run単位台帳・関所品質の計量の3点。先行のreceipt系ツールは自己計測止まり
 
