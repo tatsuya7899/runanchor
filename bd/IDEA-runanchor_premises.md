@@ -43,8 +43,8 @@ Created: 2026-09-29 / モード: 早駆け(Phase 0圧縮)
 
 | 層 | 内容 |
 |---|---|
-| 実行 | `agent-receipt run "task"`: Nemotron(Token Factory)がSDK経由でConTreeサンドボックスを駆動(エージェント本体は外部・サンドボックスは実行場)。**「書く→走る→赤→直す→緑」の自律1ループ必須**(P1-6: エージェントが玩具だとTechnological Implementationで削られる) |
-| 検収書 | 実行ごとに発行: diff hash・テストログ・exit code・コスト・モデル・シード・**ConTree operation UUID/image ID(外部アンカー)**。`agent-receipt verify <id>` = image fork→コマンド列再実行→結果比較 |
+| 実行 | `runanchor run "task"`: Nemotron(Token Factory)がSDK経由でConTreeサンドボックスを駆動(エージェント本体は外部・サンドボックスは実行場)。**「書く→走る→赤→直す→緑」の自律1ループ必須**(P1-6: エージェントが玩具だとTechnological Implementationで削られる) |
+| 検収書 | 実行ごとに発行: diff hash・テストログ・exit code・コスト・モデル・シード・**ConTree operation UUID/image ID(外部アンカー)**。`runanchor verify <id>` = image fork→コマンド列再実行→結果比較 |
 | 関所 | pending一覧→approve/reject CLI。rejected は理由付きで台帳に残る |
 | デモ | `--demo` モード: 撒き種repo付属・**審査員経路はライブAPI非依存**(Beta安定性×審査窩12月のリスク回避・P2-3)。薄いWeb UIはMVP昇格検討(デモURL要件を兼ねる) |
 | 計量 | 条件行列(バグ種別×エージェント挙動)×判定主体(人/機械)。BASELINE.mdに天井値、bench-reportに実測を分離 |
