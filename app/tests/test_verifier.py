@@ -119,3 +119,34 @@ def test_verify_replays_mounted_files():
     driver = FakeDriver(replay=op())
     verify_receipt(orig, driver)
     assert driver.ran[0]["files"] == ["/seed/x.py", "/seed/test_x.py"]
+
+
+def test_degraded_rerun_is_unverifiable_not_mismatch():
+    """DRIVER_ERROR replay (infra failure) must never masquerade as evidence
+    that the original run differed — P1-A regression."""
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    degraded = op(operation_uuid=None, status="DRIVER_ERROR",
+                  exit_code=None, stdout="", stderr="contree invocation failed",
+                  parse_warnings=["contree invocation failed"])
+    driver = FakeDriver(replay=degraded)
+    result = verify_receipt(orig, driver)
+    assert result.verdict == "unverifiable"
+    assert result.diffs["driver"]["actual"] == "DRIVER_ERROR"
+
+
+def test_demo_live_mixing_is_unverifiable():
+    """A fixture-anchored receipt can never be 'verified' against the live
+    driver (and vice versa) — FR-6 guard."""
+    demo_orig = issue_receipt(op(demo=True), task="t", run_seq=1)
+    assert verify_receipt(demo_orig, FakeDriver(replay=op())).verdict == "unverifiable"
+
+
+def test_match_carries_replay_anchor():
+    """The replay run's own provider record rides on the verdict — verify is
+    anchored evidence, not a bare claim."""
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    driver = FakeDriver(replay=op(operation_uuid="op-replay",
+                                  anchor_source="run-json"))
+    result = verify_receipt(orig, driver)
+    assert result.verdict == "match"
+    assert result.replay_operation_uuid == "op-replay"

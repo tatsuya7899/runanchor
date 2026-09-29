@@ -24,7 +24,8 @@ DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1/chat/completions"
 PLANNER_SYSTEM = (
     "You are a coding agent driving a sandboxed workspace. Reply with exactly one "
     'JSON object: {"command": "<shell command to run next>"} to act, or '
-    '{"done": true} when the task is complete. No other text.'
+    '{"done": true} when the task is complete. Add "shell_mode": true if the '
+    "command uses pipes, redirects or env vars. No other text."
 )
 
 
@@ -128,15 +129,27 @@ def run_loop(
 ) -> list[Receipt]:
     history: list[Receipt] = []
     while len(history) < max_iter:
-        action = planner.next(history)
+        try:
+            action = planner.next(history)
+        except Exception:
+            # planner/API failure mid-series: keep what ran, mark unresolved
+            break
         if action is None:
             break
-        op = driver.run(
-            action["command"],
-            cwd=action.get("cwd", "/work"),
-            files=action.get("files"),
-            shell_mode=action.get("shell_mode", False),
-        )
+        if not str(action.get("command") or "").strip():
+            # planner emitted an empty command — end the series cleanly
+            break
+        try:
+            op = driver.run(
+                action["command"],
+                cwd=action.get("cwd", "/work"),
+                files=action.get("files"),
+                shell_mode=action.get("shell_mode", False),
+            )
+        except Exception:
+            # e.g. planner emitted an empty command — end the series,
+            # the last real run still gets its unresolved marker
+            break
         receipt = issue_receipt(
             op,
             task=task,

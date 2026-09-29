@@ -62,6 +62,46 @@ def test_planner_done_stops_loop(ledger):
     assert ledger.get(series[0].receipt_id).unresolved is True
 
 
+class ExplodingPlanner:
+    def next(self, history):
+        raise RuntimeError("planner API unreachable")
+
+
+def test_planner_exception_ends_series_unresolved(ledger):
+    """An API crash mid-series must not take the whole series down."""
+    planner = ScriptedPlanner([{"command": "pytest -q"}])
+    series = run_loop(DemoDriver([OPS[0], OPS[2]]), ledger, planner,
+                      task="t", max_iter=5)
+    assert len(series) == 1
+    planner2 = ExplodingPlanner()
+    series = run_loop(DemoDriver(OPS), ledger, planner2, task="t2", max_iter=5)
+    assert series == []  # crashed before any run — nothing to mark
+
+
+def test_planner_exception_marks_last_receipt(ledger):
+    class BoomPlanner:
+        def __init__(self):
+            self.calls = 0
+        def next(self, history):
+            self.calls += 1
+            if self.calls == 1:
+                return {"command": "pytest -q"}
+            raise RuntimeError("api dead")
+
+    series = run_loop(DemoDriver(OPS), ledger, BoomPlanner(), task="t", max_iter=5)
+    assert len(series) == 1
+    assert ledger.get(series[-1].receipt_id).unresolved is True
+
+
+def test_empty_command_ends_series_unresolved(ledger):
+    """Planner emitting an empty command -> DriverError -> series ends clean."""
+    planner = ScriptedPlanner([{"command": "pytest -q"}, {"command": "  "},
+                               {"command": "pytest -q"}])
+    series = run_loop(DemoDriver(OPS), ledger, planner, task="t", max_iter=5)
+    assert len(series) == 1
+    assert ledger.get(series[-1].receipt_id).unresolved is True
+
+
 class TestNemotronPlanner:
     """Planner calls the Token Factory chat API; http_post is injected for tests."""
 

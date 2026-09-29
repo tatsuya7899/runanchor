@@ -110,6 +110,23 @@ class Ledger:
         """Every snapshot of a receipt in append order (audit trail)."""
         return [r for r in self._snapshots() if r.receipt_id == receipt_id]
 
+    def record_verification(self, receipt_id: str, verdict: str, diffs: dict,
+                            replay_operation_uuid: str | None = None,
+                            replay_anchor_source: str | None = None) -> Receipt:
+        """Append verification evidence — a match must be anchored too, not
+        only the mismatch it may cause. State itself is unchanged."""
+        current = self.get(receipt_id)
+        if current is None:
+            raise KeyError(receipt_id)
+        updated = replace(current, verification={
+            "verdict": verdict, "diffs": diffs,
+            "replay_operation_uuid": replay_operation_uuid,
+            "replay_anchor_source": replay_anchor_source,
+            "at": datetime.now(timezone.utc).isoformat(),
+        })
+        self._append(updated.to_dict())
+        return updated
+
     def corrupt_lines(self) -> list[int]:
         """Line numbers that failed to parse (evidence loss must be visible)."""
         self._index()

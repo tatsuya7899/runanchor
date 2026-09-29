@@ -58,6 +58,8 @@ class Driver(Protocol):
 class ContreeDriver:
     """Thin wrapper over `contree -S <session>` (subprocess, JSON mode)."""
 
+    is_demo = False
+
     def __init__(self, session: str, contree_bin: str = "contree", runner=None):
         self.session = session
         self.bin = contree_bin
@@ -120,7 +122,8 @@ class ContreeDriver:
         proc = self._invoke(args)
         if proc is None:
             return self._degraded(command, cwd, files,
-                                  "contree invocation failed (missing binary or timeout)")
+                                  "contree invocation failed (missing binary or timeout)",
+                                  shell_mode=shell_mode)
 
         meta = _try_json(proc.stdout)
         op_uuid = meta.get("uuid") if isinstance(meta, dict) else None
@@ -132,13 +135,15 @@ class ContreeDriver:
             show_meta = _try_json(show.stdout)
             if isinstance(show_meta, dict):
                 op_raw = show_meta
-                if op_uuid:
-                    op_raw.setdefault("uuid", op_uuid)
+        if op_uuid:
+            # never lose the uuid we captured at spawn, even if `op show` failed
+            op_raw.setdefault("uuid", op_uuid)
 
-        if proc.returncode != 0 and not op_raw:
+        if proc.returncode != 0 and not op_raw.get("uuid"):
             return self._degraded(
                 command, cwd, files,
                 f"contree run rc={proc.returncode}: {proc.stderr.strip() or 'no stderr'}",
+                shell_mode=shell_mode,
             )
 
         # Sandbox stdout lives in the run JSON envelope (provisional field
@@ -153,12 +158,12 @@ class ContreeDriver:
         return replace(rec, anchor_source=anchor_source)
 
     @staticmethod
-    def _degraded(command, cwd, files, note: str) -> OperationRecord:
+    def _degraded(command, cwd, files, note: str, shell_mode: bool = False) -> OperationRecord:
         """An execution attempt with no provider record still gets recorded —
         marked DRIVER_ERROR so it can never masquerade as a real run."""
         return OperationRecord(
             operation_uuid=None, image_uuid=None, result_image_uuid=None,
-            command=command, cwd=cwd, shell_mode=True,
+            command=command, cwd=cwd, shell_mode=shell_mode,
             status="DRIVER_ERROR", exit_code=None,
             stdout="", stderr=note, files=list(files or []),
             parse_warnings=[note],
@@ -230,9 +235,14 @@ class DemoDriver:
     """
 
     def __init__(self, ops: list[dict], event_map: dict | None = None):
-        self._ops = [OperationRecord(**{**o, "demo": True}) for o in ops]
+        self._ops = [
+            OperationRecord(**{**o, "demo": True, "anchor_source": "demo"})
+            for o in ops
+        ]
         self._events = event_map or {}
         self.current_image: str | None = None
+
+    is_demo = True
 
     @property
     def remaining(self) -> int:

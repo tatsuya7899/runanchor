@@ -237,3 +237,26 @@ class TestIntegrity:
             f.write('{"_chain": "x", "receipt": {"receip')  # torn write
         assert len(ledger.all()) == 1          # good rows still readable
         assert ledger.corrupt_lines() == [2]   # and the damage is visible
+
+
+class TestVerificationEvidence:
+    def test_record_verification_appends_anchored_evidence(self, ledger):
+        """P2-4: a match verdict is evidence too — the replay's provider
+        record is stored, not just printed."""
+        r = issue_receipt(make_op(), task="t", run_seq=1)
+        ledger.append_receipt(r)
+        updated = ledger.record_verification(
+            r.receipt_id, "match", {},
+            replay_operation_uuid="op-replay", replay_anchor_source="run-json")
+        assert updated.state == "pending"  # verify alone doesn't adopt
+        latest = ledger.get(r.receipt_id)
+        assert latest.verification["verdict"] == "match"
+        assert latest.verification["replay_operation_uuid"] == "op-replay"
+        assert len(ledger.history(r.receipt_id)) == 2
+
+    def test_warnings_are_scrubbed_before_persistence(self):
+        """P1-C: parse_warnings (which embed driver stderr) must not leak
+        secret-shaped strings into the ledger."""
+        op = make_op(parse_warnings=["contree failed: token: sk-abc123def456"])
+        r = issue_receipt(op, task="t", run_seq=1)
+        assert r.warnings == ["contree failed: REDACTED"]

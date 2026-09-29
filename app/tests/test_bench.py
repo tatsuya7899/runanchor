@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from runanchor.agent_loop import ScriptedPlanner as ScriptedPlanner_
 from runanchor.bench import CorpusError, load_corpus, run_bench
 from runanchor.contree_driver import DemoDriver
 from runanchor.judge import Verdict
@@ -125,6 +126,3 @@ def test_report_lines_are_printable(tmp_path):
     text = "\n".join(report.lines)
     assert "sensitivity" in text and "specificity" in text
     assert "s1" in text  # per-item row
-
-
-from runanchor.agent_loop import ScriptedPlanner as ScriptedPlanner_  # noqa: E402

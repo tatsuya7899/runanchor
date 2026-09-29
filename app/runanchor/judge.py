@@ -10,9 +10,10 @@ evidence is shipped to a remote endpoint, and logs can contain tokens).
 from __future__ import annotations
 
 import json
-import re
 import urllib.request
 from dataclasses import dataclass
+
+from .sanitize import scrub
 
 DEFAULT_MODEL = "nvidia/Nemotron-3_5-Lightning"
 DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1/chat/completions"
@@ -25,27 +26,8 @@ JUDGE_SYSTEM = (
     "Reject when the evidence is missing, inconsistent, or looks fabricated."
 )
 
-# Secret shapes: bearer tokens, common API key prefixes, AWS-style keys.
-SECRET_PATTERNS = [
-    re.compile(r"Bearer\s+[A-Za-z0-9._\-]+", re.IGNORECASE),
-    re.compile(r"sk-[A-Za-z0-9_\-]{8,}"),
-    re.compile(r"AKIA[0-9A-Z]{16}"),
-    re.compile(r"(?:api[_-]?key|token|secret)\s*[:=]\s*\S+", re.IGNORECASE),
-]
-
 
 def sanitize_evidence(evidence: dict) -> dict:
-    def scrub(value):
-        if isinstance(value, str):
-            for pat in SECRET_PATTERNS:
-                value = pat.sub("REDACTED", value)
-            return value
-        if isinstance(value, dict):
-            return {k: scrub(v) for k, v in value.items()}
-        if isinstance(value, list):
-            return [scrub(v) for v in value]
-        return value
-
     return scrub(evidence)
 
 

@@ -18,7 +18,7 @@ from .agent_loop import NemotronPlanner, run_loop
 from .contree_driver import ContreeDriver, DemoDriver, DriverError
 from .demo import run_demo
 from .gate import Gate
-from .ledger import Ledger
+from .ledger import InvalidTransition, Ledger
 from .verifier import verify_receipt
 
 DEFAULT_LEDGER = Path("state/receipts.jsonl")
@@ -54,12 +54,16 @@ def _cmd_run(args) -> int:
         print("       for an offline walkthrough: runanchor demo")
         return 2
     driver = ContreeDriver(session=args.session)
-    driver.use(args.image)
-    planner = NemotronPlanner(api_key=api_key, model=args.model)
+    try:
+        driver.use(args.image)
+    except DriverError as e:
+        print(f"error: could not select image {args.image}: {e}")
+        return 1
+    planner = NemotronPlanner(api_key=api_key, model=args.model, seed=args.seed)
     ledger = Ledger(args.ledger)
     series = run_loop(
         driver, ledger, planner, task=args.task,
-        max_iter=args.max_iter, model=args.model,
+        max_iter=args.max_iter, model=args.model, seed=args.seed,
     )
     if not series:
         print("no runs executed")
@@ -98,7 +102,7 @@ def _cmd_show(args) -> int:
               "stderr_tail", "diff_sha256", "files",
               "duration_s", "consumed_cpu_s", "consumed_memory", "consumed_memory_unit",
               "model", "seed", "seed_note", "unresolved", "warnings",
-              "issued_at", "decision"):
+              "verification", "issued_at", "decision"):
         print(f"{k}: {d[k]}")
     return 0
 
@@ -139,6 +143,10 @@ def _cmd_verify(args) -> int:
     if args.driver == "demo":
         driver = DemoDriver.from_dir(FIXTURE_DIR / "verify")
     else:
+        if not os.environ.get("NEBIUS_API_KEY"):
+            print("error: NEBIUS_API_KEY not set — live verify needs credentials.")
+            print("       hint: --driver demo replays the recorded fixture")
+            return 2
         driver = ContreeDriver(session=args.session)
     try:
         result = verify_receipt(r, driver)
@@ -148,9 +156,21 @@ def _cmd_verify(args) -> int:
     print(f"{result.verdict}  ({r.receipt_id[:8]})")
     for name, diff in result.diffs.items():
         print(f"  {name}: expected={diff['expected']} actual={diff['actual']}")
+    if result.replay_operation_uuid:
+        print(f"  replay anchored to op {result.replay_operation_uuid}"
+              f" ({result.replay_anchor_source})")
+    # the verification attempt itself is evidence — record every verdict
+    ledger.record_verification(
+        r.receipt_id, result.verdict, result.diffs,
+        replay_operation_uuid=result.replay_operation_uuid,
+        replay_anchor_source=result.replay_anchor_source,
+    )
     if result.verdict == "mismatch":
-        ledger.decide(r.receipt_id, "mismatch", by="verifier",
-                      reason="replay differs from recorded receipt")
+        try:
+            ledger.decide(r.receipt_id, "mismatch", by="verifier",
+                          reason="replay differs from recorded receipt")
+        except InvalidTransition:
+            pass  # already mismatch (re-verify) — evidence recorded above
     return 0 if result.verdict == "match" else 1
 
 
@@ -211,6 +231,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--image", default="python:3.12-slim")
     run.add_argument("--model", default="nvidia/Nemotron-3_5-Lightning")
     run.add_argument("--max-iter", type=int, default=5)
+    run.add_argument("--seed", type=int, default=None,
+                     help="recorded on receipts; NOT a replay guarantee (API ignores it)")
 
     sub.add_parser("list", help="list receipts")
     show = sub.add_parser("show", help="show a receipt (full id or unique prefix)")

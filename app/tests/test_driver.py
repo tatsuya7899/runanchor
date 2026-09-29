@@ -182,3 +182,22 @@ class TestContreeDriver:
         assert rec.status == "UNKNOWN"
         assert any("uuid" in w for w in rec.parse_warnings)
         assert any("exit_code" in w for w in rec.parse_warnings)
+
+    def test_op_show_failure_keeps_run_json_uuid(self):
+        """P1-B: if `op show` fails, the uuid captured at spawn survives —
+        losing it would silently strip the provider anchor off every run."""
+        run_json = json.dumps({"uuid": "op-9", "stdout": "ok\n"})
+        runner = FakeRunner([(0, run_json, ""), (1, "", "op show unsupported")])
+        d = ContreeDriver(session="s1", runner=runner)
+        rec = d.run("pytest -q", cwd="/")
+        assert rec.operation_uuid == "op-9"
+        assert rec.anchor_source == "run-json"
+        assert rec.parse_warnings  # missing fields are noted, not silent
+
+    def test_demo_driver_marks_anchor_source(self, tmp_path):
+        d = DemoDriver.from_dir(write_fixture(tmp_path, [OP]))
+        rec = d.run("x", cwd="/work")
+        assert rec.demo is True
+        assert rec.anchor_source == "demo"
+        assert d.is_demo is True
+        assert ContreeDriver(session="x").is_demo is False

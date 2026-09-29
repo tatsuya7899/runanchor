@@ -31,3 +31,30 @@
 レビューの正しさ: P0-1は製品の存立を左右する前提の炙り出しとして最も価値が高い。P1群は「証拠の誤記述」「誤アンカー」「証拠喪失」系で、いずれもツールの存在意義(証拠性)を静かに損なう性質 — 出る前に潰せてよかった。
 
 残るリスクは全て「実プロバイダ応答の実測」に集中しており、ベータ承認待ちの現在はコード側でできる上限まで潰した状態。
+
+---
+
+## 第2ラウンド(修正検証・同日・subagent_explore)
+
+- **総合判定**: **修正要** — 前回P1修正は全件確認OK、ただし新規P1×3を検出
+- 静的検証のみ(pytest/git非実行)。実テスト実行は親側で94本Greenを確認済み
+
+### 新規P1(全件修正済み)
+- **P1-A**: DRIVER_ERROR縮退recordがverifyで「mismatch」に偽装される(以前のunverifiable経路が死にコード化) → verify冒頭で `status=="DRIVER_ERROR" or operation_uuid is None` → unverifiable
+- **P1-B**: `op show`失敗時にrun-json取得済みuuidを捨てる → `op_raw.setdefault("uuid", op_uuid)` をshow成否に関わらず適用
+- **P1-C**: `Receipt.warnings`がスクラブ迂回(degraded note内のstderrに秘密混入) → `scrub_text`をwarningsへも適用
+
+### P2(採用分を修正済み)
+- verify証跡そのものを台帳へ — `Ledger.record_verification`+`Receipt.verification`(matchもreplays op UUIDつきで記録。stateは変えない)
+- demo receipt × live driver(逆も)の混交をverify冒頭でunverifiable化(FR-6と同族の偽装穴)
+- judge.pyのSECRET_PATTERNS複写を除去 → sanitize.pyへ一本化
+- `--seed`をrunへ配線(記録のみ・seed_noteはAPI非決定性を明記)
+- run_loopがplanner/driver例外・空commandでクラッシュ→series終了+unresolved印へ
+- `_cmd_run`のdriver.use失敗をcatch →綺麗なエラー
+- `_cmd_verify`のdecideをInvalidTransition捕捉(mismatchの再verify対応)
+- `_degraded`のshell_mode固定を実値へ・DemoDriverのanchor_source="demo"・PLANNER_SYSTEMへshell_mode案内追加
+- 見送り継続: 台帳並行ロック・status比較軸
+
+### 継続保留
+- **P0-1**(`-D`再実行で`result_image_uuid`が返るか): コードで潰せない唯一の残項 → **#0実測待ち**。返らない実測なら即座に比較軸を落とす退路は設計に記録済み
+

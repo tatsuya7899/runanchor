@@ -100,6 +100,7 @@ class Receipt:
     demo: bool = False
     unresolved: bool = False  # True when the agent loop gave up without green
     warnings: list[str] = field(default_factory=list)  # degraded/partial evidence notes
+    verification: dict | None = None  # latest verify evidence (verdict, diffs, replay op)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -159,5 +160,5 @@ def issue_receipt(
         seed_note=seed_note,
         issued_at=issued_at or datetime.now(timezone.utc).isoformat(),
         demo=demo or op.demo,
-        warnings=list(op.parse_warnings),
+        warnings=[scrub_text(w) for w in op.parse_warnings],
     )
