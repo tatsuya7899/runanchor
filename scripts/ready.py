@@ -64,7 +64,8 @@ def main() -> int:
           (ROOT / "docs" / "architecture.svg").exists())
 
     # submission text
-    for f in ("description.md", "feedback.md", "demo-script.md"):
+    for f in ("description.md", "feedback.md", "demo-script.md",
+              "form-answers.md"):
         check(f"submit/{f} present", (ROOT / "submit" / f).exists())
 
     # corpus integrity via the committed generator + loader
