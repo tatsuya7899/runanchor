@@ -51,6 +51,9 @@ contree -S verify_<receipt_id> op show HEAD         # exit_code/stdoutを比較
 - [ ] サンドボックス実行の課金単位(consumed_cpu/秒課金か・$25で何runできるか) → **ベータ中は無料**(下記追補)
 - [ ] Nemotron(Token Factory推論API)のエンドポイント形式(OpenAI互換か)と料金 → **下記追補で確認済み**
 - [ ] `contree run` のネットワーク遮断可否(検証の再現性に影響)
+- [ ] **[レビューP0-1・最重要]** `-D`(disposable)再実行の `op show` が `result_image_uuid` を返すか。返らない場合、verifyの「終了image有無」比較軸が構造的に偽不一致を量産 → 比較軸を落とすか再実行を非disposableにする設計変更が必要(FR-5の内部緊張)
+- [ ] **[レビューP1-3]** `contree -o json run` の実出力がspawn時に `uuid` を含むか(含めば正しいアンカー。含まなければ `op show HEAD` フォールバック=誤帰属リスクあり・receipt.anchor_source="head"で区別表示)
+- [ ] **[レビューP1-2]** `op show` JSONの実フィールド名(実装はmodels.py準拠: `result.exit_code`・`duration`・`consumed_cpu`/`consumed_memory`フラット・`metadata.command`)。失敗runの `contree run` rcがコマンドexit codeを反映するか(反映するならdriverの縮退経路が本線になる)
 
 ## 5. 追補(2026-09-29夜): 推論API調査 + Sandboxesベータ申請状況
 

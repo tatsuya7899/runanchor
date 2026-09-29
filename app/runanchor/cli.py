@@ -94,9 +94,11 @@ def _cmd_show(args) -> int:
         print("== DEMO receipt (fixture-anchored, not a live run) ==")
     for k in ("receipt_id", "task", "run_seq", "state", "status", "exit_code",
               "command", "cwd", "operation_uuid", "image_uuid", "result_image_uuid",
-              "stdout_sha256", "stderr_sha256", "stdout_tail", "diff_sha256",
+              "anchor_source", "stdout_sha256", "stderr_sha256", "stdout_tail",
+              "stderr_tail", "diff_sha256", "files",
               "duration_s", "consumed_cpu_s", "consumed_memory", "consumed_memory_unit",
-              "model", "seed", "seed_note", "unresolved", "issued_at", "decision"):
+              "model", "seed", "seed_note", "unresolved", "warnings",
+              "issued_at", "decision"):
         print(f"{k}: {d[k]}")
     return 0
 
@@ -225,7 +227,8 @@ def build_parser() -> argparse.ArgumentParser:
     verify = sub.add_parser("verify", help="replay-verify a receipt")
     verify.add_argument("receipt_id")
     verify.add_argument("--driver", choices=["live", "demo"], default="live")
-    verify.add_argument("--session", default="runanchor")
+    # separate session so verify's image fork doesn't rewind the work session
+    verify.add_argument("--session", default="runanchor-verify")
     return p
 
 

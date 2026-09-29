@@ -114,3 +114,19 @@ Python製CLI `runanchor`。エージェント本体=Nemotron(Token Factory推論
 - **再現可能性を設計要件に格上げ**(レバーL5・「検証者も被検証者になる」): READMEに計量値だけでなく「読者自身が同じ計量を回す手順」(コーパス+コマンド列)を載せる。タスク#11のREADME要件に含める
 - **アンカーの限界をREADME/FAQに明記**: プロバイダ記録は信頼の移転であって申告性の消滅ではない(同環境再実行ではプロバイダ側の不具合を検出不能)。射程は「エージェント層と実行基盤層が分離したスタック」に限る
 - **負の発見の退路**: 計量が平凡・負でも「素のフローで嘘が何%素通りするか」自体を発見として出せる — eval/BASELINE.mdの判定解釈に追記済み
+
+## 実装レビューの反映(2026-09-29追補・敵対的レビュー→修正済み)
+
+実装後に独立レビュー(subagent_explore・壊す側)を実施し、以下を設計として確定させた:
+
+- **検収書スキーマ拡張**: `files`(--fileマウント一覧・verify再現に必須)、`stderr_tail`、`unresolved`(give-up印)、`anchor_source`(run-json=head正規/head=フォールバック弱アンカー)、`warnings`(縮退・欠落フィールドの記録)
+- **台帳のtamper-evidence**: 各行は `{"_chain": sha256(前行), "receipt": {...}}` のラップ行で、追記偽造・行削除は `check_integrity()` で検出可能。壊行はスキップして `corrupt_lines()` で可視化(全滅しない)。mismatch→adopted/rejected の回復遷移を追加(mismatchは終端でなく「人間への証拠」)
+- **指紋の正規化**: stdout/stderrのSHA256は揮発トークン(経過秒・ISOタイムスタンプ・/tmpパス)を畳んでから計算 — 決定的再現なのに偽不一致にならないため。receipt発行時に正規化済み指紋を保存するのが正本側
+- **cwdの実効化**: driverは `sh -c "cd <cwd> && <cmd>"` でラップして実行。「記録されたcwdで本当に実行した」という記述の裏付けを確保(以前は要求値がそのまま記録されるだけだった=レビュー指摘P1-1)
+- **アンカー強度の区別**: `-o json run` のuuid直取り(正規)と `op show HEAD` フォールバック(弱・anchor_source="head"で表示)を実装。誤帰属リスクを黙らせない
+- **縮退経路**: contree障害・タイムアウト・非JSON応答でも `status=DRIVER_ERROR` のreceiptを発行(FR-1「失敗した試行も検収書」の厳密化)。空のop応答は `warnings` 付き
+- **秘匿の多層化**: receipt発行時にcommand/stdout_tail/stderr_tailを秘密パターンスクラブ(台帳は計量パッケージとして公開されうるため)。judge送信時のサニタイズは別層として残る
+- **verifyの失敗耐性**: 再実行がDriverErrorで失敗した場合は `unverifiable`(不一致ではない・「検証できなかった」を区別)
+- **verifyセッション分離**: CLIのverify既定セッションは `runanchor-verify`(useによる巻き戻しが作業セッションを汚さないよう分離)
+
+残置課題(#0実測で確定): -D再実行でのresult_image返却有無・run -o jsonのuuid含有・op show実フィールド名・失敗runのrc伝播。reviews側の指摘で未対処のP2(並行decideのロック・events()の型ガード等)はMLP/将来拡張として記録するのみ

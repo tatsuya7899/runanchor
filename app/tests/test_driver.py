@@ -55,6 +55,11 @@ class TestDemoDriver:
         assert second.operation_uuid == "op-2"
         assert isinstance(first, OperationRecord)
 
+    def test_fixture_records_are_forced_demo(self, tmp_path):
+        """FR-6: a replayed fixture can never masquerade as a live run."""
+        d = DemoDriver.from_dir(write_fixture(tmp_path, [OP]))
+        assert d.run("x", cwd="/work").demo is True
+
     def test_exhaustion_raises(self, tmp_path):
         d = DemoDriver.from_dir(write_fixture(tmp_path, [OP]))
         d.run("x", cwd="/work")
@@ -101,50 +106,79 @@ class TestContreeDriver:
         d.use("img-x")
         assert runner.calls[0] == ["contree", "-S", "s1", "use", "img-x"]
 
-    def test_run_then_fetch_op(self):
-        op_json = json.dumps(
-            {
-                "uuid": "op-9",
-                "status": "SUCCESS",
-                "exit_code": 0,
-                "image_uuid": "img-a",
-                "result_image_uuid": "img-b",
-                "command": "pytest -q",
-                "duration_s": 2.0,
-                "consumed": {"cpu_s": 1.0, "memory": 1024, "memory_unit": "bytes"},
-            }
-        )
-        runner = FakeRunner([(0, "1 passed\n", ""), (0, op_json, "")])
+    def test_run_anchors_via_run_json_uuid(self):
+        """The op uuid comes from the run's own JSON output, not HEAD."""
+        run_json = json.dumps({"uuid": "op-9", "stdout": "1 passed\n"})
+        op_json = json.dumps({
+            "uuid": "op-9", "status": "SUCCESS",
+            "result": {"exit_code": 0},
+            "image_uuid": "img-a", "result_image_uuid": "img-b",
+            "metadata": {"command": "pytest -q"},
+            "duration": 2.0,
+            "consumed_cpu": 1.0, "consumed_memory": 1024,
+        })
+        runner = FakeRunner([(0, run_json, ""), (0, op_json, "")])
         d = ContreeDriver(session="s1", contree_bin="contree", runner=runner)
         rec = d.run("pytest -q", cwd="/work", disposable=True)
         assert runner.calls[0] == [
-            "contree", "-S", "s1", "run", "-D", "--", "pytest", "-q",
+            "contree", "-S", "s1", "-o", "json", "run", "-D", "--",
+            "sh", "-c", "cd /work && pytest -q",
         ]
+        # anchored to the spawned op, not HEAD
         assert runner.calls[1] == [
-            "contree", "-S", "s1", "-o", "json", "op", "show", "HEAD"
+            "contree", "-S", "s1", "-o", "json", "op", "show", "op-9"
         ]
-        assert isinstance(rec, OperationRecord)
         assert rec.operation_uuid == "op-9"
+        assert rec.anchor_source == "run-json"
         assert rec.exit_code == 0
         assert rec.stdout == "1 passed\n"
+        assert rec.command == "pytest -q"   # recorded command, not the cd wrap
 
-    def test_run_shell_mode_wraps_in_sh(self):
-        runner = FakeRunner([(0, "", ""), (0, "{}", "")])
+    def test_run_without_cwd_uses_direct_argv(self):
+        run_json = json.dumps({"uuid": "op-1"})
+        op_json = json.dumps({"uuid": "op-1", "status": "SUCCESS", "result": {"exit_code": 0}})
+        runner = FakeRunner([(0, run_json, ""), (0, op_json, "")])
         d = ContreeDriver(session="s1", runner=runner)
-        d.run("echo hi && true", cwd="/work", shell_mode=True)
-        assert runner.calls[0][-3:] == ["sh", "-c", "echo hi && true"]
+        d.run("ls -la", cwd="/")
+        assert runner.calls[0][-2:] == ["ls", "-la"]
 
-    def test_cli_failure_raises_driver_error(self):
-        runner = FakeRunner([(1, "", "boom")])
+    def test_run_falls_back_to_head_when_no_uuid(self):
+        """Non-JSON run output -> sandbox stdout is raw; anchor falls back to HEAD."""
+        op_json = json.dumps({"uuid": "op-h", "status": "SUCCESS", "result": {"exit_code": 0}})
+        runner = FakeRunner([(0, "raw sandbox output\n", ""), (0, op_json, "")])
         d = ContreeDriver(session="s1", runner=runner)
-        with pytest.raises(DriverError):
-            d.run("x", cwd="/work")
+        rec = d.run("pytest -q", cwd="/")
+        assert "op" in runner.calls[1] and "HEAD" in runner.calls[1]
+        assert rec.anchor_source == "head"
+        assert rec.stdout == "raw sandbox output\n"
+        assert rec.operation_uuid == "op-h"
 
-    def test_failed_run_returns_failure_record(self):
-        """FR-1: a failed sandbox run still yields a record, not an exception."""
-        op_json = json.dumps({"uuid": "op-bad", "status": "FAILURE", "exit_code": 1})
-        runner = FakeRunner([(0, "", "failing\n"), (0, op_json, "")])
+    def test_infra_failure_returns_degraded_record(self):
+        """FR-1: even an unrecordable attempt becomes a marked record."""
+        runner = FakeRunner([(1, "", "boom"), (1, "", "boom")])
         d = ContreeDriver(session="s1", runner=runner)
         rec = d.run("pytest -q", cwd="/work")
-        assert rec.status == "FAILURE"
-        assert rec.exit_code == 1
+        assert rec.status == "DRIVER_ERROR"
+        assert rec.operation_uuid is None
+        assert rec.parse_warnings
+
+    def test_missing_binary_returns_degraded_record(self):
+        def missing(argv, **kw):
+            raise FileNotFoundError("contree")
+
+        d = ContreeDriver(session="s1", runner=missing)
+        assert d.run("x", cwd="/").status == "DRIVER_ERROR"
+
+    def test_empty_command_raises(self):
+        d = ContreeDriver(session="s1", runner=FakeRunner([]))
+        with pytest.raises(DriverError):
+            d.run("   ", cwd="/")
+
+    def test_op_record_missing_fields_carries_warnings(self):
+        """An op record without uuid/exit_code produces a warning-bearing record."""
+        runner = FakeRunner([(0, "not json", ""), (0, "{}", "")])
+        d = ContreeDriver(session="s1", runner=runner)
+        rec = d.run("x", cwd="/")
+        assert rec.status == "UNKNOWN"
+        assert any("uuid" in w for w in rec.parse_warnings)
+        assert any("exit_code" in w for w in rec.parse_warnings)
