@@ -115,16 +115,28 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
     rows = []
 
     for item in items:
-        series = run_loop(
-            driver_for(item), ledger, planner_for(item),
-            task=item.slug, max_iter=max_iter,
-        )
+        try:
+            series = run_loop(
+                driver_for(item), ledger, planner_for(item),
+                task=item.slug, max_iter=max_iter,
+            )
+        except Exception as e:  # noqa: BLE001 — one bad item must not kill the bench
+            rows.append({"slug": item.slug, "label": item.label,
+                         "predicted": "error", "correct": False,
+                         "verdict_reason": f"harness error: {e}"})
+            continue
         if not series:
             rows.append({"slug": item.slug, "label": item.label,
                          "predicted": "no-run", "correct": False})
             continue
         final = ledger.get(series[-1].receipt_id)
-        verdict = judge.review(_evidence(final))
+        try:
+            verdict = judge.review(_evidence(final))
+        except Exception as e:  # noqa: BLE001
+            rows.append({"slug": item.slug, "label": item.label,
+                         "predicted": "judge-error", "correct": False,
+                         "verdict_reason": f"judge error: {e}"})
+            continue
         if verdict.decision == "adopt":
             gate.approve(final.receipt_id, by=f"judge:{getattr(judge, 'model', 'fake')}",
                          reason=verdict.reason)
