@@ -143,3 +143,26 @@ Studio統治OSを毎日運用している人が、その個人版の関所を作
 
 - リスク#4(命名衝突)は**改名により解消**。新リスク: runanchor名の定着は今後の提出物で統一して使うこと
 - Gate 0宿題(人間作業)は不変: Token Factoryクレジットのみサインアップ→`contree run`実測が技術検証第1号
+
+---
+
+## 追補3(2026-09-29夜・クレジット適用とConTree機構のコードレベル確認)
+
+### クレジット・認証の実測状況(リスク#2の更新)
+
+- **プロモコード $25 適用完了**(Devpost経由・Nebius公式メールで発行。コード値は公開repo化を見据えて本書には記録しない)
+- **追加$25の道あり**: Nebius Builders Program(dev.nebius.com/builders)参加でToken Factory追加クレジット+Tavily/Academy特典(Devpost案内メール記載・未申請)
+- **カード入力の扱いが確定**: Nebius公式メールが「billing address または credit card を求める場合がある。bot対策の$0認証課金のみ・他の課金はなし」と回答。ドキュメント矛盾は「カード登録はあり得るが課金は発生しない」で解消(CEO制約「課金なし」は維持)
+
+### メンテナンスによる検証の一時ブロック
+
+- Token Factoryが 2026-09-29 09:00–17:00 UTC(= JST 18:00–9/30 02:00)の計画メンテナンス。**APIキー管理・endpoint変更が不可**(既存endpointのトラフィックは正常)
+- `contree auth`用のAPIキー発行はメンテ明け待ち → **技術検証第1号は9/30以降に延期**(ブロッカーは外部・期限への影響は軽微)
+
+### ConTree機構のコードレベル確認(USP-1外部アンカーの裏付け)
+
+- `contree-cli 0.9.4` / `contree-client 0.4.0` をローカル導入済み(`uv tool install`)
+- `models.py`実物で `OperationResponse` を確認: `uuid`・`image_uuid`(実行元)・`result_image_uuid`(生成物)・`status`・`duration`・`consumed_cpu`/`consumed_memory`/`image_size`(**コスト実測の根拠**)・`metadata.command`・`result`(exit code)
+- `contree op events UUID` でstdin/stdout/stderr/exitのrawイベント列を取得可能 → 「テストログの実在」証拠の取得経路が確定
+- **verify物理手順の確認**: `contree -S <key> use <image_uuid>` で記録imageへのforkがCLI機能として実在 → 「image fork→コマンド列再実行→結果比較」は実装可能。詳細は `research/contree-notes_runanchor_20260929.md`
+- 注意: 以上はコード・docsの確認であって**実行検証ではない**。`contree run`実測(APIキー発行後)まで「動くはず」と断定しない(未確認リストは同researchファイル §4)
