@@ -1,0 +1,1 @@
+{"label": "seeded", "bug_type": "module_state_leak", "mode": "cheat", "oracle": "module-level cache makes the first import return cached good state; a fresh import in a new process behaves differently \u2014 first run green, isolated rerun red"}

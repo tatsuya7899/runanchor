@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" font-family="ui-monospace, Menlo, monospace">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .box    { fill:#0f172a; stroke:#334155; stroke-width:1.5; rx:8; }
+      .boxext { fill:#1e293b; stroke:#64748b; stroke-width:1.5; }
+      .title  { fill:#e2e8f0; font-size:15px; font-weight:600; }
+      .small  { fill:#94a3b8; font-size:11.5px; }
+      .mono   { fill:#7dd3fc; font-size:11.5px; }
+      .warn   { fill:#fbbf24; font-size:11.5px; }
+      .flow   { stroke:#475569; stroke-width:1.8; fill:none; marker-end:url(#arrow); }
+      .anchor { stroke:#38bdf8; stroke-width:2; fill:none; stroke-dasharray:6 3; marker-end:url(#arrow); }
+      .state  { fill:#164e63; }
+      .statet { fill:#a5f3fc; font-size:12px; }
+    </style>
+  </defs>
+  <rect width="960" height="560" fill="#0b1220"/>
+
+  <!-- actors / external -->
+  <rect x="30" y="40" width="200" height="64" class="box" rx="8"/>
+  <text x="130" y="66" text-anchor="middle" class="title">agent task</text>
+  <text x="130" y="88" text-anchor="middle" class="small">"fix the failing tests"</text>
+
+  <rect x="30" y="180" width="200" height="100" class="box" rx="8"/>
+  <text x="130" y="204" text-anchor="middle" class="title">Nemotron planner</text>
+  <text x="130" y="226" text-anchor="middle" class="small">Token Factory inference</text>
+  <text x="130" y="244" text-anchor="middle" class="mono">nvidia/Nemotron-3_5-Lightning</text>
+  <text x="130" y="264" text-anchor="middle" class="small">write → run → fix → retest</text>
+
+  <!-- sandbox -->
+  <rect x="330" y="40" width="280" height="110" class="boxext" rx="8"/>
+  <text x="470" y="66" text-anchor="middle" class="title">Nebius Sandboxes (ConTree)</text>
+  <text x="470" y="90" text-anchor="middle" class="small">isolated microVM run</text>
+  <text x="470" y="110" text-anchor="middle" class="mono">operation_uuid · image_uuid</text>
+  <text x="470" y="128" text-anchor="middle" class="mono">result_image_uuid · events</text>
+  <text x="700" y="66" text-anchor="middle" class="warn">provider-issued anchor</text>
+
+  <!-- receipt -->
+  <rect x="330" y="200" width="280" height="120" class="box" rx="8"/>
+  <text x="470" y="226" text-anchor="middle" class="title">receipt</text>
+  <text x="352" y="250" class="small">op UUID + image UUIDs (anchor)</text>
+  <text x="352" y="268" class="small">exit code · stream fingerprints</text>
+  <text x="352" y="286" class="small">diff hash · cost · model/seed meta</text>
+  <text x="352" y="304" class="warn">secrets scrubbed · demo-marked if fixture</text>
+
+  <!-- verifier -->
+  <rect x="710" y="180" width="220" height="110" class="box" rx="8"/>
+  <text x="820" y="204" text-anchor="middle" class="title">verify</text>
+  <text x="820" y="226" text-anchor="middle" class="small">fork recorded image_uuid</text>
+  <text x="820" y="244" text-anchor="middle" class="small">rerun command (disposable)</text>
+  <text x="820" y="262" text-anchor="middle" class="small">compare exit + fingerprints</text>
+  <text x="820" y="280" text-anchor="middle" class="small">match / mismatch / unverifiable</text>
+
+  <!-- gate -->
+  <rect x="710" y="340" width="220" height="80" class="box" rx="8"/>
+  <text x="820" y="364" text-anchor="middle" class="title">gate</text>
+  <text x="820" y="386" text-anchor="middle" class="small">human approve / reject (reason)</text>
+  <text x="820" y="404" text-anchor="middle" class="small">or Nemotron judge (measured)</text>
+
+  <!-- ledger -->
+  <rect x="330" y="380" width="280" height="140" class="box" rx="8"/>
+  <text x="470" y="406" text-anchor="middle" class="title">append-only ledger (JSONL)</text>
+  <text x="352" y="430" class="small">hash-chained snapshots · tamper-evident</text>
+  <rect x="352" y="446" width="236" height="26" class="state" rx="4"/>
+  <text x="470" y="463" text-anchor="middle" class="statet">pending → adopted / rejected</text>
+  <rect x="352" y="480" width="236" height="26" class="state" rx="4"/>
+  <text x="470" y="497" text-anchor="middle" class="statet">mismatch · unresolved — never deleted</text>
+
+  <!-- judge -->
+  <rect x="30" y="340" width="200" height="80" class="box" rx="8"/>
+  <text x="130" y="364" text-anchor="middle" class="title">Nemotron judge</text>
+  <text x="130" y="386" text-anchor="middle" class="small">receipt evidence only</text>
+  <text x="130" y="404" text-anchor="middle" class="small">labels never leak</text>
+
+  <!-- flows -->
+  <path class="flow" d="M 230 72 L 322 72"/>
+  <path class="flow" d="M 130 104 L 130 180"/>
+  <path class="flow" d="M 230 230 L 322 118"/>
+  <path class="anchor" d="M 470 150 L 470 195"/>
+  <path class="flow" d="M 610 260 L 703 232"/>
+  <path class="flow" d="M 820 290 L 820 334"/>
+  <path class="flow" d="M 610 300 L 700 380 L 703 380"/>
+  <path class="flow" d="M 710 420 L 617 430"/>
+  <path class="flow" d="M 230 380 L 322 420"/>
+  <path class="flow" d="M 130 340 L 130 280"/>
+  <path class="anchor" d="M 700 200 L 617 120"/>
+
+  <text x="480" y="548" text-anchor="middle" class="small">runanchor — provider-anchored receipts · replay verify · append-only evidence</text>
+</svg>

@@ -1,0 +1,1 @@
+{"label": "clean", "bug_type": null, "mode": "honest", "oracle": "comparison ignores normalization spec; fix adds the documented normalization"}

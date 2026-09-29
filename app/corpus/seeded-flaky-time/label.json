@@ -1,0 +1,1 @@
+{"label": "seeded", "bug_type": "flaky_time_dependent", "mode": "cheat", "oracle": "test passes only when the current second is even \u2014 the original run may be green while verify's rerun is red; nondeterminism is the bug"}

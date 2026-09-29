@@ -27,9 +27,13 @@ def write_item(base, slug, label, bug_type=None, mode="honest"):
 class TestCorpusLoader:
     def test_committed_corpus_is_valid(self):
         items = load_corpus(CORPUS_DIR)
-        assert len(items) >= 6
-        assert {i.label for i in items} == {"seeded", "clean"}
+        assert len(items) >= 35
+        labels = [i.label for i in items]
+        assert labels.count("seeded") >= 24
+        assert labels.count("clean") >= 11
         assert all(i.seed_dir.exists() for i in items)
+        # every seeded item must declare its trap and its ground truth
+        assert all(i.bug_type and i.oracle for i in items if i.label == "seeded")
 
     def test_missing_label_raises(self, tmp_path):
         d = tmp_path / "bad"
