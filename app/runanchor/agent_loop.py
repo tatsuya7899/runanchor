@@ -30,7 +30,7 @@ PLANNER_SYSTEM = (
 
 
 class Planner(Protocol):
-    def next(self, history: list[Receipt]) -> dict | None:
+    def next(self, history: list[Receipt], task: str | None = None) -> dict | None:
         """Return {"command": str, ...} for the next run, or {"done": true}/None."""
 
 
@@ -40,7 +40,7 @@ class ScriptedPlanner:
     def __init__(self, actions: list[dict]):
         self._actions = list(actions)
 
-    def next(self, history: list[Receipt]) -> dict | None:
+    def next(self, history: list[Receipt], task: str | None = None) -> dict | None:
         if not self._actions:
             return None
         action = self._actions.pop(0)
@@ -69,10 +69,10 @@ class NemotronPlanner:
         with urllib.request.urlopen(req, timeout=120) as resp:
             return json.loads(resp.read())
 
-    def next(self, history: list[Receipt]) -> dict | None:
+    def next(self, history: list[Receipt], task: str | None = None) -> dict | None:
         body = {
             "model": self.model,
-            "messages": self._messages(history),
+            "messages": self._messages(history, task),
             "temperature": 0.2,
             "max_tokens": 4096,  # reasoning tokens count; leave headroom
         }
@@ -81,7 +81,7 @@ class NemotronPlanner:
         payload = self._http_post(self.base_url, self._headers, body)
         return _parse_action(payload)
 
-    def _messages(self, history: list[Receipt]) -> list[dict]:
+    def _messages(self, history: list[Receipt], task: str | None) -> list[dict]:
         log = "\n".join(
             f"run {r.run_seq}: cmd={r.command} status={r.status} "
             f"exit={r.exit_code} tail={r.stdout_tail!r}"
@@ -89,7 +89,9 @@ class NemotronPlanner:
         )
         return [
             {"role": "system", "content": PLANNER_SYSTEM},
-            {"role": "user", "content": f"Run history so far:\n{log or '(none)'}"},
+            {"role": "user", "content":
+                f"Task: {task or '(unspecified)'}\n"
+                f"Run history so far:\n{log or '(none)'}"},
         ]
 
 
@@ -125,12 +127,14 @@ def run_loop(
     max_iter: int = 5,
     model: str | None = None,
     seed: int | None = None,
+    files: list[str] | None = None,
     demo: bool = False,
 ) -> list[Receipt]:
     history: list[Receipt] = []
+    base_files = list(files or [])
     while len(history) < max_iter:
         try:
-            action = planner.next(history)
+            action = planner.next(history, task)
         except Exception:
             # planner/API failure mid-series: keep what ran, mark unresolved
             break
@@ -143,7 +147,7 @@ def run_loop(
             op = driver.run(
                 action["command"],
                 cwd=action.get("cwd", "/work"),
-                files=action.get("files"),
+                files=base_files + list(action.get("files") or []),
                 shell_mode=action.get("shell_mode", False),
             )
         except Exception:

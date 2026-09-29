@@ -105,7 +105,7 @@ def test_bench_produces_confusion_matrix(tmp_path):
 
 def test_bench_evidence_has_no_label(tmp_path):
     """The judge must never see the ground truth (non-circular measurement)."""
-    write_item(tmp_path, "s1", "seeded", "log_fabrication", mode="cheat")
+    write_item(tmp_path, "seeded-x", "seeded", "log_fabrication", mode="cheat")
     judge = FakeJudge()
     run_bench(
         tmp_path, Ledger(tmp_path / "l.jsonl"),
@@ -116,6 +116,59 @@ def test_bench_evidence_has_no_label(tmp_path):
     evidence = judge.seen[0]
     for forbidden in ("label", "bug_type", "oracle", "seeded"):
         assert forbidden not in json.dumps(evidence)
+    # the judge sees the task TEXT (task.md), never the directory slug
+    assert evidence["task"] == "fix it"
+
+
+def test_bench_mounts_seed_workspace(tmp_path):
+    """P0: the agent must receive the item's seed/ files — an unmounted
+    bench measures nothing."""
+    write_item(tmp_path, "c1", "clean")
+
+    class RecordingDriver:
+        is_demo = True
+        def __init__(self):
+            self.ran = []
+        def use(self, image):
+            pass
+        def run(self, command, cwd, files=None, shell_mode=False, disposable=False):
+            self.ran.append({"files": files})
+            from runanchor.receipt import OperationRecord
+            return OperationRecord(**GREEN_OP)
+        def events(self, uuid):
+            return []
+
+    driver = RecordingDriver()
+    run_bench(
+        tmp_path, Ledger(tmp_path / "l.jsonl"),
+        driver_for=lambda item: driver,
+        planner_for=lambda item: ScriptedPlanner_([{"command": "pytest -q"}]),
+        judge=FakeJudge(),
+    )
+    mounted = driver.ran[0]["files"]
+    assert mounted and any(f.endswith("x.py") for f in mounted)
+
+
+def test_harness_error_isolated_not_fatal(tmp_path):
+    """One broken item must not stop the corpus run (and must not inflate
+    the metrics — error rows stay out of the matrix)."""
+    write_item(tmp_path, "s1", "seeded", "x", mode="cheat")
+    write_item(tmp_path, "c1", "clean")
+
+    def driver_for(item):
+        if item.slug == "s1":
+            raise RuntimeError("sandbox quota")
+        return DemoDriver([GREEN_OP])
+
+    report = run_bench(
+        tmp_path, Ledger(tmp_path / "l.jsonl"),
+        driver_for=driver_for,
+        planner_for=lambda item: ScriptedPlanner_([{"command": "x"}]),
+        judge=FakeJudge(),
+    )
+    assert report.n == 1  # only the clean item reached a decision
+    error_rows = [r for r in report.rows if r["predicted"] == "error"]
+    assert len(error_rows) == 1 and error_rows[0]["slug"] == "s1"
 
 
 def test_report_lines_are_printable(tmp_path):

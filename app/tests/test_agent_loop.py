@@ -63,7 +63,7 @@ def test_planner_done_stops_loop(ledger):
 
 
 class ExplodingPlanner:
-    def next(self, history):
+    def next(self, history, task=None):
         raise RuntimeError("planner API unreachable")
 
 
@@ -82,7 +82,7 @@ def test_planner_exception_marks_last_receipt(ledger):
     class BoomPlanner:
         def __init__(self):
             self.calls = 0
-        def next(self, history):
+        def next(self, history, task=None):
             self.calls += 1
             if self.calls == 1:
                 return {"command": "pytest -q"}
@@ -134,3 +134,11 @@ class TestNemotronPlanner:
         payload = {"choices": [{"message": {"content": "no json here"}}]}
         p, _ = self.make_planner(payload)
         assert p.next([]) is None
+
+    def test_task_reaches_the_model(self):
+        """P0: the planner must know the task — a bench run without it
+        measures nothing."""
+        payload = {"choices": [{"message": {"content": '{"command": "x"}'}}]}
+        p, calls = self.make_planner(payload)
+        p.next([], task="fix median()")
+        assert "fix median()" in calls[0]["messages"][1]["content"]

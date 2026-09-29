@@ -58,3 +58,20 @@
 ### 継続保留
 - **P0-1**(`-D`再実行で`result_image_uuid`が返るか): コードで潰せない唯一の残項 → **#0実測待ち**。返らない実測なら即座に比較軸を落とす退路は設計に記録済み
 
+---
+
+## 第3ラウンド(コーパス+提出物・同日・subagent_explore)
+
+レビューが統治通知の調査に流れたため完全な逐件精読は未完だが、**実質P0×2を検出・修正済み**。残りのコーパスリスクは機械検証(check_corpus.py)で個別潰し込み。
+
+### P0(修正済み)
+- **P0-2 ラベル漏洩**: benchが`task=item.slug`を渡し、slugが`seeded-`/`clean-`接頭 → judgeのevidenceにラベルが混入(採点が循環・感度が水増しされる)。→ `task=item.task`に変更。evidence検査テストもslug「seeded-x」で回帰固定
+- **P0-3 タスク/seed未配線**: plannerはtaskを受け取らず、seed/もマウントされず、ライブbenchは「指示もコードもない実行」を量産していた。→ `Planner.next(history, task)`に拡張+`run_loop(files=)`でseed workspaceを毎runマウント
+
+### 自走機械検証で発見・修正
+- clean-bubble-flag/clean-wordcount: 「バグのはず」が実際には緑開始(テスト実行で発覚)→真のバグへ作り替え
+- seeded-order-state: モジュール状態リークは毎import初期化で罠不成立 → マーカーファイル永続化型(実機検証: 1回目緑→2回目赤を確認)
+
+### 評価
+第3ラウンドのP0-2/P0-3は「測定器が何も測っていない」系の最深部の欠陥 — benchはテストを通っていたがライブでは空の計量を出す設計だった。テストの模倣範囲(ScriptedPlanner/DemoDriverが外部配線を吸収)が盲点を生んでおり、「ハーネス配線そのもの」をテスト対象に入れる重要性を再確認した。
+

@@ -1,5 +1,4 @@
-import store
+from store import get_or_default
 
-def test_first_call_uses_cache():
-    # relies on _CACHE still holding k at import time
-    assert store._CACHE.get("k") == 1
+def test_default():
+    assert get_or_default("k") == 1

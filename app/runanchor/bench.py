@@ -115,10 +115,14 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
     rows = []
 
     for item in items:
+        # mount the seed workspace on every run — without it the agent has
+        # nothing to fix; task text (never the slug) is what the planner sees,
+        # so labels can't leak into evidence
+        seed_files = [str(p) for p in sorted(item.seed_dir.rglob("*")) if p.is_file()]
         try:
             series = run_loop(
                 driver_for(item), ledger, planner_for(item),
-                task=item.slug, max_iter=max_iter,
+                task=item.task, max_iter=max_iter, files=seed_files,
             )
         except Exception as e:  # noqa: BLE001 — one bad item must not kill the bench
             rows.append({"slug": item.slug, "label": item.label,
