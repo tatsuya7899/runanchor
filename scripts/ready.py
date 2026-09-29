@@ -23,6 +23,32 @@ def check(name: str, ok: bool, detail: str = "") -> None:
     RESULTS.append((name, bool(ok), detail))
 
 
+_PLACEHOLDER_TAIL = ("…", "<", ">", "your_", "xxx", "placeholder",
+                     "example", "dummy", "REDACTED")
+
+
+def _looks_placeholder(match: str) -> bool:
+    """`API_KEY=…` in docs is not a secret — only treat real-looking values
+    as hits."""
+    tail = match.rsplit("=", 1)[-1].rsplit(":", 1)[-1].strip()
+    if any(tail.lower().startswith(p.lower().rstrip("_"))
+           or p in tail for p in _PLACEHOLDER_TAIL):
+        return True
+    # `api_key = api_key` — an identifier-valued assignment is not a secret;
+    # only quoted literals or long key-shaped bare values count as real hits
+    if tail[:1] in {'"', "'"} and tail[-1:] == tail[:1]:
+        return len(tail.strip("\"'")) < 8
+    has_letter = any(c.isalpha() for c in tail)
+    has_digit = any(c.isdigit() for c in tail)
+    return not (len(tail) >= 20 and has_letter and has_digit)
+
+
+def _embedded_word(text: str, m: "re.Match[str]") -> bool:
+    """`task-…` words can contain the token shape — a match whose start is
+    glued to a word char is not a secret."""
+    return m.start() > 0 and text[m.start() - 1].isalnum()
+
+
 def main() -> int:
     readme = (ROOT / "README.md").read_text(encoding="utf-8") \
         if (ROOT / "README.md").exists() else ""
@@ -77,6 +103,8 @@ def main() -> int:
         check("offline demo runs", proc.returncode == 0)
 
     # secret scan over tracked text files (the ledger package may be published)
+    # — reuse the real patterns, not a naive substring ("task-" embeds "sk-")
+    from runanchor.sanitize import SECRET_PATTERNS
     secret_hit = None
     for p in list(ROOT.rglob("*")):
         if p.is_dir() or any(part.startswith(".") for part in p.parts):
@@ -87,10 +115,16 @@ def main() -> int:
             text = p.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        if "sk-" in text and "REDACTED" not in text and "sanitize" not in p.name:
-            if "sk-abc" not in text:  # test fixture literals are documented
-                secret_hit = p
-                break
+        # test files legitimately carry fixture-shaped literals (marked in tests)
+        rel = p.relative_to(ROOT)
+        if str(rel).startswith("app/tests"):
+            continue
+        hits = [m for pat in SECRET_PATTERNS for m in pat.finditer(text)]
+        real = [m.group(0) for m in hits
+                if not _embedded_word(text, m) and not _looks_placeholder(m.group(0))]
+        if real:
+            secret_hit = p
+            break
     check("no obvious secrets in tracked files", secret_hit is None,
           str(secret_hit or ""))
 
