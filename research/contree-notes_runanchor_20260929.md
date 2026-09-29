@@ -48,6 +48,43 @@ contree -S verify_<receipt_id> op show HEAD         # exit_code/stdoutを比較
 - [ ] operation UUID/`op events`の実レスポンス(項目名・ログの完全性)
 - [ ] `use <image_uuid>` で過去imageへ本当にforkできるか(他人でなく自分のimageでも)
 - [ ] 7,000+プリロードSWE環境の一覧・選び方(`contree images --prefix=`で見える範囲)
-- [ ] サンドボックス実行の課金単位(consumed_cpu/秒課金か・$25で何runできるか)
-- [ ] Nemotron(Token Factory推論API)のエンドポイント形式(OpenAI互換か)と料金
+- [ ] サンドボックス実行の課金単位(consumed_cpu/秒課金か・$25で何runできるか) → **ベータ中は無料**(下記追補)
+- [ ] Nemotron(Token Factory推論API)のエンドポイント形式(OpenAI互換か)と料金 → **下記追補で確認済み**
 - [ ] `contree run` のネットワーク遮断可否(検証の再現性に影響)
+
+## 5. 追補(2026-09-29夜): 推論API調査 + Sandboxesベータ申請状況
+
+### Sandboxesベータ
+
+- **クローズドベータ**: コンソールのSandboxes画面から「Request beta access」フォーム送信(project ID+email+use case)。承認待ち。トークン自体は有効(auth済み)で、権限付与でそのまま使える
+- **ベータ期間中はサンドボックス実行が無料**(コンソール表記 "Free while in beta — runs don't consume your credits")→ 予算モデルが変わる: $25はほぼ推論のみに使える
+- 注意: beta中は個人情報・機密データをサンドボックスに入れない(公式注意書き)
+
+### 推論API(Nemotron)— 確定情報
+
+- **OpenAI互換**: `https://api.tokenfactory.nebius.com/v1/chat/completions` + `Authorization: Bearer $NEBIUS_API_KEY`(contreeと同じAPIキー。リージョン別ホストあり: `api.tokenfactory.us-central1.nebius.com` 等)
+- **モデルカタログ**: https://tokenfactory.nebius.com/model-catalog.md (JSON正本: /api/public/models_info)
+- **NVIDIA OSSモデル(ハッカソン要件充足候補)**:
+
+  | モデル | 料金(入力/出力・$ per 1M) | ctx | region |
+  |---|---|---|---|
+  | `nvidia/Nemotron-3_5-Lightning` | **0.06 / 0.24** | 1024K | eu-north1 |
+  | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` | 0.06 / 0.24 | 262K | eu-north1 |
+  | `nvidia/nemotron-3-super-120b-a12b` | 0.30 / 0.90 | 256K | us-central1 |
+  | `nvidia/Nemotron-3-Ultra-550b-a55b` | 1.00 / 3.00 | 1024K | us-central1 |
+
+- **コスト感**: Lightning/Nanoで1run系列≈100K in/20K outとして約$0.011 — コーパス35件でも$1未満。**サンドボックス無料と合わせ、クレジット制約は実質緩和**(judgeをSuper等に上げても数$規模)
+- **SWE-bench環境がプリロード**: SWE-bench Verified / SWE-rebench / V2 — 撒き種コーパスを自前だけでなく既知バグの標準ベンチから取れる可能性(第三者再現可能性にも強い)
+- Mini-SWE-Agent連携あり(`mini-swe-agent[contree]`)— ただし公式docs自身がContreeEnvironmentのSDK互換バグを報告(2026-09時点)。自前ループが無難だが参照実装として価値あり
+
+### 未確認(ライブ推論テストで潰す)
+
+- [x] seedパラメータを受け付けるか・効くか → **受理されるが決定性なし**(実測: seed=42・temperature=0.7・同一プロンプト2回で応答が非一致。receiptのseed項目はnullable/参考値として扱う・再現の根拠にはしない)
+- [x] 同じAPIキーで推論APIが即使えるか → **可**(contreeと同じトークンでchat completions成功)
+- [ ] 構造化出力/JSON mode対応(judgeの判定を厳格化するなら) — docsに「Structured output & JSON」ページあり・未実測
+- [ ] SWE環境の具体的な起動方法(images一覧で見える命名規則)
+
+### 実測メモ(2026-09-29)
+
+- `nvidia/Nemotron-3_5-Lightning` は**reasoning系モデル**: 出力が思考過程で始まり、`max_tokens`はreasoning tokensも消費する(200で思考途中切断)。judge/agentのプロンプト設計は最終回答の抽出を前提にする・max_tokensに余裕を持つ
+- 最小呼び出しの実コスト: 31 tokens(21 in/10 out)≒$0.000004 — 実測でも無視できる単価
