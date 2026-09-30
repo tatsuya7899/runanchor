@@ -17,6 +17,14 @@ SECRET_PATTERNS = [
     re.compile(r"(?:api[_-]?key|token|secret)\s*[:=]\s*\S+", re.IGNORECASE),
 ]
 
+# Host paths reach the ledger through mounted-file records — replace the
+# user's home directory with ~ so a published ledger doesn't leak local paths.
+_HOME = re.compile(r"/Users/[^/]+|/home/[^/]+")
+
+
+def scrub_path(text: str) -> str:
+    return _HOME.sub("~", text)
+
 
 def scrub_text(text: str) -> str:
     for pat in SECRET_PATTERNS:

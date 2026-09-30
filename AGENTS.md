@@ -29,7 +29,7 @@ Nebius × NVIDIA Global AI Hackathon(締切 2026-10-30 10:00 PDT・約10/31 02:0
 
 ## 検証
 
-実装検証: `./scripts/verify`(実装後に整備)。提出前ゲート: `python3 scripts/ready.py`(整備後)。コミット前は `_ops/hooks/check_doc_claims_gate.py` がVERIFYマーカーを機械検査する(親repo側フック)。
+実装検証: `./scripts/verify`(pytest全量・オフライン)。コーパス検証: `python3 scripts/validate_corpus.py`(oracleがseed状態で罠を検出するか)。packaging: `python3 scripts/check_packaging.py`。提出前ゲート: `python3 scripts/ready.py`。コミット前は `_ops/hooks/check_doc_claims_gate.py` がVERIFYマーカーを機械検査する(親repo側フック)。
 
 ## 関連
 

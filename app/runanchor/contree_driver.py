@@ -218,6 +218,8 @@ class ContreeDriver:
             exit_code=fields.get("exit_code"),
             stdout=str(fields.get("stdout") or ""),
             stderr=str(fields.get("stderr") or ""),
+            # ConTree run records carry no workspace diff — kept as an
+            # optional field for providers that expose one, never evidence
             diff_sha256=None,
             files=list(files or []),
             duration_s=fields.get("duration"),

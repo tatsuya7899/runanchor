@@ -80,8 +80,17 @@ def main() -> int:
               seeded >= 24 and clean >= 11, f"seeded={seeded} clean={clean}")
         check("every seeded item declares bug_type + oracle",
               all(i.bug_type and i.oracle for i in items if i.label == "seeded"))
+        check("every item ships a runnable hidden oracle",
+              all(i.oracle_dir is not None and i.oracle_command for i in items))
     except Exception as e:  # noqa: BLE001 — report, don't crash the gate
         check("corpus loads cleanly", False, str(e))
+
+    # oracles actually collect+run against the seed state (validate_corpus)
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "validate_corpus.py")],
+        cwd=ROOT, capture_output=True, text=True)
+    check("oracles valid against seed state", proc.returncode == 0,
+          proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "")
 
     # demo fixtures exist
     fx = APP / "fixtures" / "demo"
@@ -129,10 +138,38 @@ def main() -> int:
     check("no obvious secrets in tracked files", secret_hit is None,
           str(secret_hit or ""))
 
-    # honesty gate: measured numbers must not be placeholders at submission
-    pending = "_pending_" in readme
-    check("measured values are real (not pending)", not pending,
-          "live measurement #0 still pending — cannot submit with placeholders")
+    # packaging: `pip install .` must work (setuptools config is checked
+    # statically here; the actual install is verified by check_packaging.py)
+    meta = (ROOT / "pyproject.toml").read_text(encoding="utf-8") \
+        if (ROOT / "pyproject.toml").exists() else ""
+    check("pyproject declares setuptools build + app/ layout",
+          "setuptools.build_meta" in meta
+          and '"app"' in meta and "packages.find" in meta)
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "check_packaging.py")],
+        cwd=ROOT, capture_output=True, text=True)
+    check("package + entry point resolve", proc.returncode == 0,
+          proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "")
+
+    # honesty gate: measured numbers must not be placeholders at submission —
+    # scan EVERY published document, not just the README
+    pending_files = []
+    for doc in [ROOT / "README.md", ROOT / "eval" / "BASELINE.md",
+                *sorted((ROOT / "submit").glob("*.md"))]:
+        if doc.exists() and "_pending_" in doc.read_text(encoding="utf-8"):
+            pending_files.append(doc.relative_to(ROOT))
+    check("measured values are real (not pending)", not pending_files,
+          f"_pending_ remains in: {', '.join(map(str, pending_files))}")
+
+    # fields only the owner can fill on submission day (URLs that require
+    # external publication) — flagged separately so the cause is visible
+    owner_files = []
+    for doc in sorted((ROOT / "submit").glob("*.md")):
+        if "OWNER ACTION REQUIRED" in doc.read_text(encoding="utf-8"):
+            owner_files.append(doc.relative_to(ROOT))
+    check("submission URLs filled (owner-side publish)", not owner_files,
+          f"OWNER ACTION REQUIRED remains in: "
+          f"{', '.join(map(str, owner_files))}")
 
     print("== submission readiness ==")
     fails = 0

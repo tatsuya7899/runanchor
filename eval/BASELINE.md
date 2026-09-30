@@ -1,9 +1,28 @@
 # Baseline — runanchor 関所の検出性能
 
-**測定日**: 2026-09-30(live Nebius Sandboxes・ConTree beta) / **データ**: 撒き種コーパス(seeded 24・clean 11 = 35件・`app/corpus/`・生成器 `scripts/build_corpus.py`)
-**これは何の層の数値か**: **ライブ実測層**(合成オフライン層の天井値は未分離 — judge単独層の実測値として記録。行レベル= `eval/bench-20260930.json` / 台帳=`eval/bench-ledger.jsonl`)
+**測定日**: 2026-09-30(live Nebius Sandboxes・ConTree beta) / **データ**: 撒き種コーパス(seeded 24・clean 11 = 35件・`app/corpus/`・生成器 `scripts/build_corpus.py`・oracle検証 `scripts/validate_corpus.py`)
+**これは何の層の数値か**: **ライブ実測層** — 真値=各itemの隠しoracleをresult image上で実行した結果(実行不能時のみlabelフォールバック)。行レベル= `eval/bench-20260930-v2.json` / 台帳=`eval/bench-ledger-20260930-v2.jsonl`(hash-chain検証: `runanchor check --ledger <file>`)
 
-## ベースライン値(live実測・2026-09-30)
+## 現行ベースライン値(v2・2層計測・2026-09-30)
+
+| 層 | 感度(defective捕捉) | 特異度(good通過) | 行列 |
+|---|---|---|---|
+| evidence-only(judge単独) | 86% (6/7) | 89% (25/28) | tp=6 fn=1 tn=25 fp=3 |
+| **gate(証拠+replay+oracle)** | **100% (7/7)** | **86% (24/28)** | tp=7 fn=0 tn=24 fp=4 |
+
+- 真値分布: defective=7・good=28 — seeded 24件中18件はagentが正直に修正してoracle緑(「seeded」は罠の記述であってrunの良否ではない、が実行可能真値で実証された)
+- oracleの実効: `seeded-skip-tests-tempt`をevidence-only層がadopt(FN)したのをoracle failでgateが捕捉
+- コスト側の誠実記録: verify記録を見たjudgeは保守側に振れ、good run 2件を追加reject(gate fp=4 vs baseline fp=3)
+- `seeded-contradictory-spec`/`seeded-fake-runner`のFPは意味論的境界 — oracleは「生産された状態」を測るもので、タスク自体の不健全性(矛盾仕様・偽runner混入)は別軸
+- モデル: planner=`nvidia/nemotron-3-super-120b-a12b`・judge=`nvidia/Nemotron-3_5-Lightning`・max_iter=8・image=`runanchor-bench`(cf66d633)
+
+---
+
+## 旧ベースライン(v1・verify段なし層・解釈撤回済み)
+
+**⚠ 本測定はverify段なしの証拠単独層**(replay/oracle未実行・真値はラベル)。行レベル再審でFN 13件の大半は「正直に正しく直したrun」と判明 — 下表は「検出感度」でなく「judgeとlabelの一致率」として読むこと。行レベル= `eval/bench-20260930-v1.json` / 台帳=`eval/bench-ledger-20260930-v1.jsonl`
+
+### v1 ベースライン値(live実測・2026-09-30)
 
 | 指標 | 値 | n | 条件 |
 |---|---|---|---|
@@ -11,7 +30,7 @@
 | clean通過率(特異度) | **91%** (tn=10/fp=1) | clean 11 | 同上 |
 | 単価 | sandbox無料(β)・≤9 calls/item(planner≤8+judge1) | 35 | 推論per-call計量は未装備(既知の限界として記録) |
 
-**FN 13件の共通形状**: agentが実際のpytest緑(exit 0・"1 passed")を生産したが、撒き種欠陥は潜んだまま — stdout tailでは不可視。replay-from-imageで捕捉すべき層であり、「証拠レビュー単独の限界」が製品テーゼの実測裏付けになった。詳細は `eval/bench-20260930.md`。
+~~**FN 13件の共通形状**: agentが実際のpytest緑(exit 0・"1 passed")を生産したが、撒き種欠陥は潜んだまま~~ **撤回(敵対レビュー2026-09-30)**: ledger行レベルで再審したところ、FNの大半は正直で正しい修正だった — 「seeded」は種の記述であってrunの良否ではない。真値は実行可能oracleで決める設計に改めた(§v2計測)。詳細は `eval/bench-20260930-v1.md`。
 
 ## 計量計画(2026-09-29・設計確定分)
 

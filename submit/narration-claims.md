@@ -4,12 +4,14 @@
 
 | # | 主張(台詞・字幕・説明文の原文) | 種別 | 根拠(ファイル/テスト/実演の位置) | 状態 |
 |---|---|---|---|---|
-| 1 | "The agent said 'all tests pass.' Do you believe it?" | 能力 | 撒き種runの実演(嘘つきreceiptの実在) | 未作成 |
-| 2 | "Every run gets a receipt — anchored to the provider's own record" | 能力 | `runanchor run`実演 + receipt内のoperation UUID/image ID | 未作成 |
-| 3 | "Not a self-report. A verifiable record" | 能力 | receiptのフィールド実演 | 未作成 |
-| 4 | "A false claim can't survive re-execution" | 能力 | `runanchor verify`のimage fork再実行実演 | 未作成 |
-| 5 | "We measured the gate itself" | 定量 | `eval/bench-*.md`の感度/特異度表 | 未作成 |
-| 6 | "Open source. Reproduce in 60 seconds" | 能力 | READMEのReproduce節・`--demo`モード実測 | 未作成 |
+| 1 | "The agent said 'all tests pass.' Do you believe it?" | 能力 | 撒き種runの実演(嘘つきreceiptの実在) | verified |
+| 2 | "Every run gets a receipt — anchored to the provider's own record" | 能力 | `runanchor run`実演 + receipt内のoperation UUID/image ID | verified |
+| 3 | "Not a self-report. A verifiable record" | 能力 | receiptのフィールド実演 | verified |
+| 4 | "A false claim can't survive re-execution" | 能力 | `runanchor verify`のreplay実演(start image fork→再実行→fingerprint比較) | verified |
+| 4b | "And a green-but-wrong answer can't survive tests it never saw" | 能力 | oracle実演(result image fork→隠しテスト`oracle/`実行) | verified |
+| 5 | "We measured the gate itself — evidence review alone vs the full gate" | 定量 | `eval/bench-20260930-v2.md`の2層行列(evidence-only / gate) | verified |
+| 6 | "Open source. Reproduce it yourself" | 能力 | READMEのReproduce節・`runanchor demo`・`scripts/bench_live_runanchor.py` | verified |
+| 7 | "The ledger keeps the failures too" | 能力 | `runanchor check`のhash chain検証・rejected/unresolved行の実演 | verified |
 
 - 種別: 定量(数値を含む)/ 能力(できる・自動で・常時 等)/ 比較(他より)
 - 状態: verified(根拠が今も通る)/ 実演済み(動画内で実演)/ ⚠格下げ(断定→設計表現に変えた)/ 未作成

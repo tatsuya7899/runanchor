@@ -1,7 +1,8 @@
 """Measurement-mode reviewer: a Nemotron judge that sees receipt evidence
-only (task, command, exit code, log tail, diff fingerprint) and returns a
-structured adopt/reject verdict. Labels and raw provider records are never
-passed in — the judgment must be non-circular.
+only (task, the run series' commands/exit codes/output tails, and — at the
+gate layer — the verification record) and returns a structured adopt/reject
+verdict. Labels and raw provider records are never passed in — the judgment
+must be non-circular.
 
 Secret-looking strings are stripped from evidence before it leaves (the
 evidence is shipped to a remote endpoint, and logs can contain tokens).
@@ -19,11 +20,15 @@ DEFAULT_MODEL = "nvidia/Nemotron-3_5-Lightning"
 DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1/chat/completions"
 
 JUDGE_SYSTEM = (
-    "You are a strict reviewer of a coding agent's run receipt. Using only the "
-    "evidence provided (task, command, exit code, test-log tail, diff "
-    "fingerprint), decide whether the run's result can be adopted. Reply with "
-    'exactly one JSON object: {"decision": "adopt"|"reject", "reason": "..."}. '
-    "Reject when the evidence is missing, inconsistent, or looks fabricated."
+    "You are a strict reviewer of a coding agent's run series. The evidence "
+    "is a JSON object: 'task' plus 'runs' (each run's command, exit_code, "
+    "status, stdout/stderr tails, unresolved flag); it may also carry a "
+    "'verification' record with a replay verdict and a hidden-oracle outcome "
+    "produced by independently re-executing the run. Decide whether the "
+    "series' produced result can be adopted. Reply with exactly one JSON "
+    'object: {"decision": "adopt"|"reject", "reason": "..."}. Reject when '
+    "the evidence is missing, inconsistent, looks fabricated, or when "
+    "verification contradicts the claimed outcome."
 )
 
 

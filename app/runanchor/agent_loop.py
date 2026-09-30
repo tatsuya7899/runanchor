@@ -1,8 +1,10 @@
 """The autonomous agent loop: write -> run -> red -> fix -> green.
 
-Each sandbox run is issued a receipt; the series ends on green, planner
-done, or max_iter. A series that never reaches green marks its final
-receipt unresolved=True (the failure stays on the ledger, not discarded).
+Each sandbox run is issued a receipt; the series ends only on planner
+done, planner/driver failure, empty command, or max_iter — an exit-0 run
+is evidence, not completion (a reconnaissance `ls` exits 0 without
+demonstrating anything). A series that never reaches green marks its
+final receipt unresolved=True (the failure stays on the ledger).
 
 Planners are injectable: ScriptedPlanner for tests/demo, NemotronPlanner
 calls the Token Factory chat API (OpenAI-compatible).

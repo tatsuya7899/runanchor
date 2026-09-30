@@ -254,6 +254,32 @@ class TestVerificationEvidence:
         assert latest.verification["replay_operation_uuid"] == "op-replay"
         assert len(ledger.history(r.receipt_id)) == 2
 
+    def test_record_verification_persists_oracle(self, ledger):
+        """The hidden-oracle outcome is anchored evidence too — verdict,
+        op UUID, and stdout tail ride on the verification record."""
+        r = issue_receipt(make_op(), task="t", run_seq=1)
+        ledger.append_receipt(r)
+        oracle = {"verdict": "fail", "command": "pytest -q oracle/",
+                  "operation_uuid": "op-oracle", "exit_code": 1,
+                  "stdout_tail": "1 failed"}
+        ledger.record_verification(
+            r.receipt_id, "mismatch", {"oracle": {"expected": "exit 0", "actual": 1}},
+            replay_operation_uuid="op-replay",
+            oracle=oracle, oracle_operation_uuid="op-oracle")
+        latest = ledger.get(r.receipt_id)
+        assert latest.verification["oracle"]["verdict"] == "fail"
+        assert latest.verification["oracle_operation_uuid"] == "op-oracle"
+
+    def test_decision_binds_evidence_meta(self, ledger):
+        """A decision records WHICH evidence payload it judged — the hash
+        makes post-hoc evidence swaps detectable."""
+        r = issue_receipt(make_op(), task="t", run_seq=1)
+        ledger.append_receipt(r)
+        h = "f" * 64
+        updated = ledger.decide(r.receipt_id, "adopted", by="judge:x",
+                                meta={"evidence_sha256": h})
+        assert updated.decision["meta"]["evidence_sha256"] == h
+
     def test_warnings_are_scrubbed_before_persistence(self):
         """P1-C: parse_warnings (which embed driver stderr) must not leak
         secret-shaped strings into the ledger."""

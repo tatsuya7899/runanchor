@@ -80,6 +80,7 @@ def _cmd_run(args) -> int:
     series = run_loop(
         driver, ledger, planner, task=args.task,
         max_iter=args.max_iter, model=args.model, seed=args.seed,
+        files=list(args.file or []),
     )
     if not series:
         print("no runs executed")
@@ -164,8 +165,21 @@ def _cmd_verify(args) -> int:
             print("       hint: --driver demo replays the recorded fixture")
             return 2
         driver = ContreeDriver(session=args.session)
+    oracle_files = []
+    if args.oracle_dir:
+        odir = Path(args.oracle_dir)
+        oracle_files = [
+            f"{p.resolve()}:/work/oracle/{p.relative_to(odir)}"
+            for p in sorted(odir.rglob("*")) if p.is_file()
+        ]
+    oracle_command = args.oracle_command
+    if oracle_files and not oracle_command:
+        from .bench import DEFAULT_ORACLE_COMMAND
+        oracle_command = DEFAULT_ORACLE_COMMAND
     try:
-        result = verify_receipt(r, driver)
+        result = verify_receipt(r, driver,
+                                oracle_files=oracle_files,
+                                oracle_command=oracle_command)
     except DriverError as e:
         print(f"verify failed: {e}")
         return 1
@@ -175,11 +189,16 @@ def _cmd_verify(args) -> int:
     if result.replay_operation_uuid:
         print(f"  replay anchored to op {result.replay_operation_uuid}"
               f" ({result.replay_anchor_source})")
+    if result.oracle is not None:
+        print(f"  oracle: {result.oracle['verdict']}"
+              f" (op {result.oracle_operation_uuid})")
     # the verification attempt itself is evidence — record every verdict
     ledger.record_verification(
         r.receipt_id, result.verdict, result.diffs,
         replay_operation_uuid=result.replay_operation_uuid,
         replay_anchor_source=result.replay_anchor_source,
+        oracle=result.oracle,
+        oracle_operation_uuid=result.oracle_operation_uuid,
     )
     if result.verdict == "mismatch":
         try:
@@ -188,6 +207,27 @@ def _cmd_verify(args) -> int:
         except InvalidTransition:
             pass  # already mismatch (re-verify) — evidence recorded above
     return 0 if result.verdict == "match" else 1
+
+
+def _cmd_check(args) -> int:
+    """Audit a ledger file: hash-chain integrity + corrupt lines."""
+    ledger = Ledger(args.ledger)
+    broken = ledger.check_integrity()
+    corrupt = ledger.corrupt_lines()
+    try:
+        lines = sum(1 for l in Path(args.ledger).read_text(
+            encoding="utf-8").splitlines() if l.strip())
+    except OSError:
+        lines = 0
+    n = len(ledger.all())
+    if broken:
+        print(f"CHAIN BROKEN at lines {broken}")
+    if corrupt:
+        print(f"corrupt lines skipped: {corrupt}")
+    if not broken and not corrupt:
+        print(f"ok: {lines} snapshots / {n} receipts, hash chain intact")
+        return 0
+    return 1
 
 
 def _cmd_bench(args) -> int:
@@ -199,28 +239,39 @@ def _cmd_bench(args) -> int:
     from .bench import run_bench
     from .judge import NemotronJudge
 
-    judge = NemotronJudge(api_key=api_key, model=args.model)
+    judge = NemotronJudge(api_key=api_key, model=args.judge_model or args.model)
+    planner_model = args.planner_model or args.model
 
     def driver_for(item):
         d = ContreeDriver(session=f"{args.session}-{item.slug}")
         d.use(args.image)
         return d
 
+    def verify_driver_for(item):
+        return ContreeDriver(session=f"{args.session}-{item.slug}-verify")
+
+    if args.no_verify:
+        verify_driver_for = None
+
     def planner_for(item):
-        return NemotronPlanner(api_key=api_key, model=args.model)
+        return NemotronPlanner(api_key=api_key, model=planner_model)
 
     report = run_bench(
         args.corpus, Ledger(args.ledger),
         driver_for=driver_for, planner_for=planner_for, judge=judge,
+        verify_driver_for=verify_driver_for,
         max_iter=args.max_iter,
     )
     for line in report.lines:
         print(line)
     if args.out:
         Path(args.out).write_text(json.dumps(
-            {"matrix": asdict(report.matrix), "rows": report.rows,
-             "sensitivity": report.sensitivity, "specificity": report.specificity},
-            indent=2))
+            {"matrix": asdict(report.matrix),
+             "evidence_matrix": asdict(report.evidence_matrix),
+             "truth_source": report.truth_source,
+             "rows": report.rows,
+             "sensitivity": report.sensitivity,
+             "specificity": report.specificity}, indent=2))
         print(f"report written: {args.out}")
     return 0
 
@@ -238,7 +289,13 @@ def build_parser() -> argparse.ArgumentParser:
     bench.add_argument("--session", default="runanchor-bench")
     bench.add_argument("--image", default="python:3.12-slim")
     bench.add_argument("--model", default="nvidia/Nemotron-3_5-Lightning")
-    bench.add_argument("--max-iter", type=int, default=5)
+    bench.add_argument("--planner-model", default=None,
+                       help="model driving the agent loop (default: --model)")
+    bench.add_argument("--judge-model", default=None,
+                       help="model reviewing evidence (default: --model)")
+    bench.add_argument("--max-iter", type=int, default=8)
+    bench.add_argument("--no-verify", action="store_true",
+                       help="skip the replay+oracle stage (evidence-only judge)")
     bench.add_argument("--out", default=None, help="write the report JSON here")
 
     run = sub.add_parser("run", help="run an agent task (live: needs NEBIUS_API_KEY)")
@@ -246,11 +303,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--session", default="runanchor")
     run.add_argument("--image", default="python:3.12-slim")
     run.add_argument("--model", default="nvidia/Nemotron-3_5-Lightning")
-    run.add_argument("--max-iter", type=int, default=5)
+    run.add_argument("--max-iter", type=int, default=8)
+    run.add_argument("--file", action="append", default=None, metavar="HOST:INSTANCE",
+                     help="mount a host file/dir into the workspace "
+                          "(e.g. ./seed/calc.py:/work/calc.py); repeatable")
     run.add_argument("--seed", type=int, default=None,
                      help="recorded on receipts; NOT a replay guarantee (API ignores it)")
 
     sub.add_parser("list", help="list receipts")
+    sub.add_parser("check", help="audit ledger hash-chain integrity")
     show = sub.add_parser("show", help="show a receipt (full id or unique prefix)")
     show.add_argument("receipt_id")
 
@@ -262,11 +323,20 @@ def build_parser() -> argparse.ArgumentParser:
     reject.add_argument("receipt_id")
     reject.add_argument("--reason", default=None)
 
-    verify = sub.add_parser("verify", help="replay-verify a receipt")
+    verify = sub.add_parser(
+        "verify",
+        help="verify a receipt: replay from the start image + optional hidden "
+             "oracle on the result image")
     verify.add_argument("receipt_id")
     verify.add_argument("--driver", choices=["live", "demo"], default="live")
     # separate session so verify's image fork doesn't rewind the work session
     verify.add_argument("--session", default="runanchor-verify")
+    verify.add_argument("--oracle-dir", default=None,
+                        help="hidden oracle directory to mount at /work/oracle "
+                             "and run against the produced result image")
+    verify.add_argument("--oracle-command", default=None,
+                        help="command for the oracle check "
+                             "(default when --oracle-dir: 'python3 -m pytest -q oracle/')")
     return p
 
 
@@ -278,6 +348,8 @@ def main(argv=None) -> int:
         return _cmd_run(args)
     if args.cmd == "list":
         return _cmd_list(args)
+    if args.cmd == "check":
+        return _cmd_check(args)
     if args.cmd == "show":
         return _cmd_show(args)
     if args.cmd == "approve":

@@ -93,3 +93,19 @@ def test_run_without_credentials_fails_cleanly(tmp_path, capsys, monkeypatch):
     rc = main(["--ledger", str(tmp_path / "l.jsonl"), "run", "fix the bug"])
     assert rc != 0
     assert "NEBIUS_API_KEY" in capsys.readouterr().out
+
+
+def test_check_reports_intact_ledger(ledger_path, capsys):
+    assert main(["--ledger", str(ledger_path), "check"]) == 0
+    assert "hash chain intact" in capsys.readouterr().out
+
+
+def test_check_detects_tampered_ledger(ledger_path, capsys):
+    """Flip a byte in a middle line — the chain check must flag it."""
+    lines = ledger_path.read_text().splitlines()
+    mid = json.loads(lines[0])
+    mid["receipt"]["command"] = "rm -rf /"  # tamper with recorded evidence
+    lines[0] = json.dumps(mid)
+    ledger_path.write_text("\n".join(lines) + "\n")
+    assert main(["--ledger", str(ledger_path), "check"]) == 1
+    assert "CHAIN BROKEN" in capsys.readouterr().out

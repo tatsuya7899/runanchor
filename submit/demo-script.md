@@ -10,7 +10,7 @@ Show terminal, empty directory.
 ## 0:15–0:45 — Offline demo (proves the whole flow, no credentials)
 
 ```bash
-python3 -m runanchor.cli --ledger demo.jsonl demo
+runanchor demo
 ```
 
 Narrate while it runs: agent series red → red → green; a receipt per run,
@@ -24,29 +24,37 @@ runanchor show <receipt-id>   # point at operation_uuid, anchor_source,
                               # fingerprints, decision fields
 ```
 
-## 0:45–1:30 — Verify in action
+## 0:45–1:30 — Verify in action (two axes)
 
-Explain: the receipt stores the start image UUID. Verify forks that recorded
-environment and reruns the recorded command — exit code + output fingerprints
-compared against the original.
+Explain: the receipt stores the start image UUID AND the result image UUID.
+Verify runs two independent checks:
 
-- Show a `match`: "the claim reproduced — adoptable evidence."
-- Then show or narrate the `mismatch` path: "if the rerun differs, the receipt
-  turns mismatch on the ledger — and a human still decides, because a mismatch
-  is evidence, not a verdict."
+- **Replay**: fork the recorded start image, rerun the recorded command,
+  compare exit code + normalized output fingerprints. Show a `match`: "the
+  claim reproduced — adoptable evidence." Narrate the `mismatch` path: "if
+  the rerun differs, the receipt turns mismatch on the ledger — and a human
+  still decides, because a mismatch is evidence, not a verdict."
+- **Hidden oracle**: fork the produced *result* image, mount a test suite the
+  agent never saw (`oracle/`), run it. "A green log can be honest or lucky —
+  this checks the state, not the story."
 
 ## 1:30–2:15 — Measured gate quality
 
 ```bash
-runanchor bench --corpus app/corpus
+python3 scripts/bench_live_runanchor.py --planner-model nvidia/nemotron-3-super-120b-a12b \
+    --judge-model nvidia/Nemotron-3_5-Lightning --max-iter 8 \
+    --ledger eval/bench-ledger-new.jsonl --out eval/bench-new.json
 ```
 
 > "We don't ask you to trust our gate either. Here's the labeled corpus —
-> 24 seeded bad runs, 11 clean — the judge prompt, and the exact commands.
-> Our sensitivity/specificity: <MEASURED>. Regenerate the corpus, run it
-> yourself, check our numbers."
+> 24 seeded traps, 11 clean — the judge prompt, and the exact commands.
+> Two numbers, not one: reading evidence alone, the judge caught 6 of 7
+> defective runs; with replay + the hidden oracle, the gate caught all 7 —
+> and one honest run it would have rejected came back adopted. Regenerate
+> the corpus, run it yourself, check our numbers."
 
-Show the confusion matrix output. Show `app/corpus/<item>/label.json` briefly.
+Show the two-layer confusion matrix output. Show `app/corpus/<item>/oracle/`
+briefly — "the ground truth here is executable, not a label".
 
 ## 2:15–2:45 — Under the hood
 

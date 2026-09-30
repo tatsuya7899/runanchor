@@ -14,7 +14,7 @@ import uuid
 from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 
-from .sanitize import scrub_text
+from .sanitize import scrub_path, scrub_text
 
 TAIL_LINES = 20
 
@@ -149,7 +149,10 @@ def issue_receipt(
         stdout_tail=scrub_text(_tail(op.stdout)),
         stderr_tail=scrub_text(_tail(op.stderr)),
         diff_sha256=op.diff_sha256,
-        files=list(op.files),
+        # mount specs keep host_path:instance_path (replay needs the host
+        # side); the home dir is scrubbed so a published ledger carries no
+        # local identity
+        files=[scrub_path(f) for f in op.files],
         anchor_source=op.anchor_source,
         duration_s=op.duration_s,
         consumed_cpu_s=op.consumed_cpu_s,

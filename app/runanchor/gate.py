@@ -17,8 +17,10 @@ class Gate:
     def pending(self) -> list[Receipt]:
         return self.ledger.pending()
 
-    def approve(self, receipt_id: str, *, by: str, reason: str | None = None) -> Receipt:
-        return self.ledger.decide(receipt_id, "adopted", by=by, reason=reason)
+    def approve(self, receipt_id: str, *, by: str, reason: str | None = None,
+                meta: dict | None = None) -> Receipt:
+        return self.ledger.decide(receipt_id, "adopted", by=by, reason=reason, meta=meta)
 
-    def reject(self, receipt_id: str, *, by: str, reason: str) -> Receipt:
-        return self.ledger.decide(receipt_id, "rejected", by=by, reason=reason)
+    def reject(self, receipt_id: str, *, by: str, reason: str,
+               meta: dict | None = None) -> Receipt:
+        return self.ledger.decide(receipt_id, "rejected", by=by, reason=reason, meta=meta)

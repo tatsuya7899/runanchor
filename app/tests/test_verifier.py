@@ -30,14 +30,16 @@ def op(**kw):
 
 
 class FakeDriver:
-    """Replays a canned op record; can fail on use()/run() to simulate
-    lost images or unexecutable replays."""
+    """Replays canned op records; can fail on use()/run() to simulate
+    lost images or unexecutable replays. `replays` (list) serves a
+    different record per call — replay op first, then the oracle op."""
 
     is_demo = False
 
     def __init__(self, replay: OperationRecord | None = None,
+                 replays: list | None = None,
                  use_fails=False, run_fails=False):
-        self.replay = replay
+        self.replays = list(replays) if replays else ([replay] if replay else [])
         self.use_fails = use_fails
         self.run_fails = run_fails
         self.used_images = []
@@ -54,7 +56,11 @@ class FakeDriver:
             raise DriverError("run failed")
         self.ran.append(dict(command=command, cwd=cwd, files=files,
                              disposable=disposable))
-        return self.replay
+        if not self.replays:
+            raise DriverError("fixture exhausted")
+        if len(self.replays) > 1:
+            return self.replays.pop(0)
+        return self.replays[0]
 
     def events(self, operation_uuid):
         return []
@@ -186,3 +192,78 @@ def test_match_carries_replay_anchor():
     result = verify_receipt(orig, driver)
     assert result.verdict == "match"
     assert result.replay_operation_uuid == "op-replay"
+
+
+ORACLE_CMD = "python3 -m pytest -q oracle/"
+ORACLE_FILES = ["/abs/oracle/test_oracle.py:/work/oracle/test_oracle.py"]
+
+
+def test_oracle_runs_against_result_image():
+    """The hidden oracle forks the RESULT image (what the agent produced),
+    not the start image — and mounts the oracle files at /work/oracle."""
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    driver = FakeDriver(replays=[
+        op(operation_uuid="op-replay"),
+        op(operation_uuid="op-oracle", exit_code=0),
+    ])
+    result = verify_receipt(orig, driver, oracle_files=ORACLE_FILES,
+                            oracle_command=ORACLE_CMD)
+    assert driver.used_images == ["img-start", "img-end"]
+    assert driver.ran[1]["files"] == ORACLE_FILES
+    assert driver.ran[1]["disposable"] is True
+    assert result.oracle["verdict"] == "pass"
+    assert result.oracle_operation_uuid == "op-oracle"
+    assert result.verdict == "match"
+
+
+def test_oracle_failure_is_mismatch():
+    """Oracle red on the produced state = the claimed green does not hold,
+    even when the replay itself matches."""
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    driver = FakeDriver(replays=[
+        op(operation_uuid="op-replay"),
+        op(operation_uuid="op-oracle", exit_code=1, stdout="1 failed\n"),
+    ])
+    result = verify_receipt(orig, driver, oracle_files=ORACLE_FILES,
+                            oracle_command=ORACLE_CMD)
+    assert result.verdict == "mismatch"
+    assert result.oracle["verdict"] == "fail"
+    assert result.diffs["oracle"]["actual"] == 1
+
+
+def test_oracle_infra_error_is_not_fail():
+    """An oracle run that errored at infra level is 'error', never 'fail' —
+    a couldn't-run check must not condemn the receipt."""
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    driver = FakeDriver(replays=[
+        op(operation_uuid="op-replay"),
+        op(operation_uuid=None, status="DRIVER_ERROR", exit_code=None,
+           stdout="", stderr="boom"),
+    ])
+    result = verify_receipt(orig, driver, oracle_files=ORACLE_FILES,
+                            oracle_command=ORACLE_CMD)
+    assert result.oracle["verdict"] == "error"
+    assert "oracle" not in result.diffs
+    assert result.verdict == "match"
+
+
+def test_no_oracle_configured_skips_stage():
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    driver = FakeDriver(replay=op(operation_uuid="op-replay"))
+    result = verify_receipt(orig, driver)
+    assert result.oracle is None
+    assert result.oracle_operation_uuid is None
+    assert len(driver.ran) == 1  # replay only
+
+
+def test_oracle_falls_back_to_start_image_when_no_result():
+    """A DRIVER_ERROR-producing last run yields no result image — the oracle
+    then inspects the start image (the state that actually persisted)."""
+    orig = issue_receipt(op(result_image_uuid=None), task="t", run_seq=1)
+    driver = FakeDriver(replays=[
+        op(operation_uuid="op-replay"),
+        op(operation_uuid="op-oracle", exit_code=0),
+    ])
+    verify_receipt(orig, driver, oracle_files=ORACLE_FILES,
+                   oracle_command=ORACLE_CMD)
+    assert driver.used_images == ["img-start", "img-start"]

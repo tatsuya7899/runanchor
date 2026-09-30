@@ -45,8 +45,17 @@ def run_demo(fixture_dir, ledger_path) -> dict:
         )
 
     final = receipts[-1]
-    result = verify_receipt(final, verify_driver)
+    result = verify_receipt(
+        final, verify_driver,
+        # hidden-oracle stage: the fixture's second op plays the oracle run —
+        # a suite the demo "agent" never saw, executed on the result image
+        oracle_command="python3 -m pytest -q oracle/",
+    )
     lines.append(f"[DEMO] verify {final.receipt_id[:8]}: {result.verdict}")
+    if result.oracle is not None:
+        lines.append(
+            f"[DEMO] hidden oracle on result image: {result.oracle['verdict']} "
+            f"(op={result.oracle_operation_uuid})")
 
     gate.reject(
         receipts[1].receipt_id,

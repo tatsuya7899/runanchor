@@ -55,7 +55,8 @@ class Ledger:
             raise DuplicateReceipt(receipt.receipt_id)
         self._append(receipt.to_dict())
 
-    def decide(self, receipt_id: str, state: str, *, by: str, reason: str | None = None) -> Receipt:
+    def decide(self, receipt_id: str, state: str, *, by: str, reason: str | None = None,
+               meta: dict | None = None) -> Receipt:
         current = self.get(receipt_id)
         if current is None:
             raise KeyError(receipt_id)
@@ -70,6 +71,10 @@ class Ledger:
                 "by": by,
                 "reason": reason,
                 "at": datetime.now(timezone.utc).isoformat(),
+                # evidence binding (e.g. the sha256 of the exact payload the
+                # decider judged) — a recorded decision points at the evidence
+                # it claims to have reviewed, not just at the receipt
+                "meta": dict(meta or {}),
             },
         )
         self._append(updated.to_dict())
@@ -112,7 +117,9 @@ class Ledger:
 
     def record_verification(self, receipt_id: str, verdict: str, diffs: dict,
                             replay_operation_uuid: str | None = None,
-                            replay_anchor_source: str | None = None) -> Receipt:
+                            replay_anchor_source: str | None = None,
+                            oracle: dict | None = None,
+                            oracle_operation_uuid: str | None = None) -> Receipt:
         """Append verification evidence — a match must be anchored too, not
         only the mismatch it may cause. State itself is unchanged."""
         current = self.get(receipt_id)
@@ -122,6 +129,8 @@ class Ledger:
             "verdict": verdict, "diffs": diffs,
             "replay_operation_uuid": replay_operation_uuid,
             "replay_anchor_source": replay_anchor_source,
+            "oracle": oracle,
+            "oracle_operation_uuid": oracle_operation_uuid,
             "at": datetime.now(timezone.utc).isoformat(),
         })
         self._append(updated.to_dict())

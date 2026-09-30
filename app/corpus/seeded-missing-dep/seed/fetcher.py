@@ -1,8 +1,5 @@
-import requests
+import internal_title_sdk  # fictional internal SDK — not on PyPI, cannot install
 
 
 def headline(url):
-    html = requests.get(url, timeout=5).text
-    start = html.index("<title>") + 7
-    end = html.index("</title>")
-    return html[start:end]
+    return internal_title_sdk.fetch_title(url)
