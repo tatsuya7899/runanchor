@@ -91,3 +91,56 @@ contree -S verify_<receipt_id> op show HEAD         # exit_code/stdoutを比較
 
 - `nvidia/Nemotron-3_5-Lightning` は**reasoning系モデル**: 出力が思考過程で始まり、`max_tokens`はreasoning tokensも消費する(200で思考途中切断)。judge/agentのプロンプト設計は最終回答の抽出を前提にする・max_tokensに余裕を持つ
 - 最小呼び出しの実コスト: 31 tokens(21 in/10 out)≒$0.000004 — 実測でも無視できる単価
+
+## 6. 追補2(2026-09-30): Sandboxesベータ承認・ライブ#0検証の実測結果
+
+**承認**: 件名「Welcome to Nebius Token Factory Sandboxes Beta」(contree@nebius.com・2026-09-30 07:33 UTC)。`contree images`で3,000+イメージ取得成功(権限付与を実機確認)。ベータ中の同時実行上限=50ops。
+
+### 実runのJSONスキーマ(foreground・`-o json`・実測値)
+
+非使い捨てrun(`contree -S ra_probe -o json run -- echo hello-runanchor`):
+
+```json
+{"uuid": "01a0f146-...", "kind": "instance", "status": "SUCCESS",
+ "duration": 1.298, "image_size": 926,
+ "result_image_uuid": "b2516231-0903-440d-920f-9f638c2f9b81",
+ "metadata": {"result": {"stdout": {"value": "hello-runanchor\n", "encoding": "ascii", "truncated": false},
+   "stderr": {"value": "", "encoding": "ascii", "truncated": false},
+   "state": {"exit_code": 0, "timed_out": false}}},
+ "result": {"image": "b2516231-...", "tag": null},
+ "exit_code": 0, "image": "b2516231-...", "tag": "",
+ "stdout": "hello-runanchor\n", "stderr": "", "error": ""}
+```
+
+`op show`(UUID・HEAD参照とも可)は同系統のフラット形:
+
+```json
+{"uuid": "...", "status": "SUCCESS", "exit_code": 0, "duration": 0.438,
+ "result_image_uuid": "b2516231-...", "kind": "instance", "image_size": 0,
+ "image": "b2516231-...", "tag": "", "error": "",
+ "result": {"stdout": "hello-runanchor\n", "stderr": "",
+   "state": {"exit_code": 0, "timed_out": false}}}
+```
+
+### #0検証の結論(§4未確認リストの全解決)
+
+- [x] `contree run`は実際に動く → **動作確認済み**(ベータ中無料)
+- [x] operation UUID/`op show`実レスポンス → **上記スキーマで確定**
+- [x] `use <image_uuid>`で過去imageへforkできるか → **可**(b2516231…から`use`→run→同image UUIDが再出現)
+- [x] **[P0-1] `-D`が`result_image_uuid`を返すか → 返らない(`null`)**。disposable=checkpoint不生成が仕様。**設計変更確定: verifyの再実行は`-D`ではなく、verify専用セッション(`ra_verify_<receipt_id>`)での非使い捨てrunとし、生成checkpointの`result_image_uuid`を比較に使う**(セッションはverify完了後に`session delete`で掃除)
+- [x] **[P1-3] `run -o json`がspawn時に`uuid`を含むか → 含む**(foregroundでも全フィールドが1オブジェクトで返る → anchor_source="run-json"が本線で安定)
+- [x] **[P1-2] `op show`の実フィールド名 → 実測確定**: フラットに`uuid`/`status`/`exit_code`/`duration`/`result_image_uuid`/`image`/`kind`/`image_size`/`tag`/`error`+`result.{stdout,stderr,state.{exit_code,timed_out}}`(run出力とは階層が一部異なる → パーサは両形を許容する必要あり)
+- [x] 失敗runの形: `run -- false` → **`status:"SUCCESS"`・`exit_code:1`**(status=オーケストレーション成否・exit_code=プロセス終了コード・分離)。CLIのrcはパイプ処理の関係で未確定だが、JSONのexit_codeが正本
+- [x] `--file host:inst`マウント → **動作確認済み**(/tmp/ra_mount_test.txt→/work/mounted.txtの内容がcatで一致)
+- [x] **同一コマンド再実行で同一`result_image_uuid`** → 確認(echo同一文でb2516231…が2回出現・imageは内容アドレス化/重複排除されている → 「終了状態一致」の比較軸として生きる)
+- [ ] `consumed_cpu`/`consumed_memory`/`created_at`の実フィールド(今回の最小runでは非露出・コスト実測時に確認)
+- [ ] ネットワーク遮断可否(未確認)
+- [ ] SWE環境の命名規則(未確認・`images --prefix=`で探す)
+
+### 設計への影響(実装修正タスク)
+
+1. `run`のJSONパーサを実スキーマに合わせる(フラットフィールド+`metadata.result.{stdout,stderr,state}`+`result.{stdout,stderr,state}`の2形態)
+2. **cwdは`-C`フラグへ変更**(現行の`sh -c`での`cd`ラップは廃止 — `-s`内のcdは公式非推奨)
+3. **verifyは-Dを廃止しverify専用セッション+非使い捨てrunへ**(result_image_uuid比較軸を維持。セッションは`session delete <key> -y`で掃除)
+4. `status`の実語彙は`SUCCESS`/`FAILED`等(models.py準拠だが値域確認済み)
+5. セッションキー規約: `runanchor_<ledger>-<seq>`・verifyは`ra_verify_<receipt_id>`(-Sフラグ運用・env依存禁止は既設計どおり)
