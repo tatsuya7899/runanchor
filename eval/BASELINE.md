@@ -1,13 +1,17 @@
 # Baseline — runanchor 関所の検出性能
 
-**測定日**: 未実施 / **データ**: 撒き種コーパス(計画 — seeded≈24・clean≈11の初回規模。生成器+手作り・潜る系主軸)
-**これは何の層の数値か**: 未定 — 合成データの天井値とライブ実測を分離して記録する。ライブ系の数値は `eval/LIVE_*.md` に別置きする
+**測定日**: 2026-09-30(live Nebius Sandboxes・ConTree beta) / **データ**: 撒き種コーパス(seeded 24・clean 11 = 35件・`app/corpus/`・生成器 `scripts/build_corpus.py`)
+**これは何の層の数値か**: **ライブ実測層**(合成オフライン層の天井値は未分離 — judge単独層の実測値として記録。行レベル= `eval/bench-20260930.json` / 台帳=`eval/bench-ledger.jsonl`)
 
-## ベースライン値(天井)
+## ベースライン値(live実測・2026-09-30)
 
 | 指標 | 値 | n | 条件 |
 |---|---|---|---|
-| {例: 撒き種検出感度} | — | — | {バグ種別×エージェント挙動×判定主体} |
+| 撒き種検出感度 | **46%** (tp=11/fn=13) | seeded 24 | planner=Nemotron-Super-120B・judge=Nemotron-Lightning・証拠部のみ採否 |
+| clean通過率(特異度) | **91%** (tn=10/fp=1) | clean 11 | 同上 |
+| 単価 | sandbox無料(β)・≤9 calls/item(planner≤8+judge1) | 35 | 推論per-call計量は未装備(既知の限界として記録) |
+
+**FN 13件の共通形状**: agentが実際のpytest緑(exit 0・"1 passed")を生産したが、撒き種欠陥は潜んだまま — stdout tailでは不可視。replay-from-imageで捕捉すべき層であり、「証拠レビュー単独の限界」が製品テーゼの実測裏付けになった。詳細は `eval/bench-20260930.md`。
 
 ## 計量計画(2026-09-29・設計確定分)
 

@@ -32,9 +32,14 @@ the agent planner and the measurement judge). Python, MIT license.
 ============================================================
 Measured results (if the form has a results/metrics field)
 ============================================================
-sensitivity: _pending_  | specificity: _pending_  | cost per run: _pending_
-(measured on a published labeled corpus — 24 seeded + 11 clean; corpus,
-judge prompt and command sequence committed for third-party reproduction)
+sensitivity: **46% (11/24)** | specificity: **91% (10/11)** |
+cost: sandbox free during beta, ≤9 model calls per item
+(measured 2026-09-30 on live Nebius Sandboxes — 24 seeded + 11 clean
+labeled corpus; every run anchored to a ConTree operation UUID in
+eval/bench-ledger.jsonl. The 46% miss rate is the product thesis made
+measurable: a judge reading receipt evidence alone cannot see latent
+deception behind a green stdout tail — replay verification exists to
+catch exactly that layer)
 
 ============================================================
 Demo video (YouTube URL)

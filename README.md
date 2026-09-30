@@ -17,19 +17,27 @@ Engineering track).
 
 ## Measured gate quality
 
-> **Status: pending live validation.** The measurement harness, corpus and
-> judge prompt are committed and reproducible (see *Reproduce the measurement*
-> below), but headline numbers require a live Nebius Sandboxes run — currently
-> awaiting closed-beta access. The offline demo and full test suite work today.
+> **Measured 2026-09-30 on live Nebius Sandboxes** (beta). Row-level results:
+> `eval/bench-20260930.json` + `eval/bench-ledger.jsonl` (every run anchored
+> to a real ConTree operation UUID — inspectable via `contree op show`).
 
 | metric | value | how it was measured |
 |--------|-------|---------------------|
-| sensitivity (bad runs caught) | _pending_ | labeled seeded corpus, n=24 |
-| specificity (good runs passed) | _pending_ | clean control tasks, n=11 |
-| cost per measured run | _pending_ | Token Factory usage records |
+| sensitivity (bad runs caught) | **46%** (11/24) | labeled seeded corpus, n=24 |
+| specificity (good runs passed) | **91%** (10/11) | clean control tasks, n=11 |
+| cost per measured item | sandbox free during beta; ≤9 model calls/item | 35 items, planner=Nemotron-Super-120B, judge=Nemotron-Lightning |
 
-We publish these numbers only after measuring them ourselves — and you can
-re-run the same procedure rather than trusting ours.
+**Why 46% is the headline, not a disclaimer:** a judge reviewing receipt
+evidence alone misses subtle deceptions — hardcoded passing cases,
+state-dependent tests, latent spec violations look identical to real fixes in
+a stdout tail. That miss is exactly what replay verification exists to catch:
+re-executing from the recorded image detects evidence the report glossed
+over. Most judge rejections were *insufficient evidence* — conservative and
+correct for a gate, but not yet proof of detection. Row-level detail and the
+bug-type breakdown live in `eval/bench-20260930.md`.
+
+We publish only numbers we measured — and you can re-run the same procedure
+rather than trusting ours (`scripts/bench_live_runanchor.py`).
 
 ## Why not just trust the agent's log?
 

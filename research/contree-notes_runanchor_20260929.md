@@ -186,3 +186,16 @@ contree -S verify_<receipt_id> op show HEAD         # exit_code/stdoutを比較
 1. **`run_loop`の「exit 0で系列終了」を廃止** — `ls`のような偵察コマンドの成功で「タスク完了」扱いになり、エージェントが何もせず系列終了していた。系列終了はplannerのdoneのみ
 2. **seedマウントは系列の最初のrunのみ** — 毎runマウントすると再適用で編集が巻き戻る(上記実測)
 3. benchはアイテムごとにthrowawayセッションを`close()`で掃除(ベータ50ops上限の汚染防止)
+
+## §9 追補(2026-09-30) — ベンチ本実測結果(35件・live)
+
+`scripts/bench_live_runanchor.py` 完走。253 receipts記録(`eval/bench-ledger.jsonl`・全opはConTree UUID錨付き)。
+
+| 指標 | 値 |
+|---|---|
+| 感度(悪いrunを止める率) | **46%** (tp=11/fn=13) |
+| 特異度(良いrunを通す率) | **91%** (tn=10/fp=1) |
+
+**最重要の所見**: TPのほぼ全件は「証拠不足によるreject」(agentが8回のrun予算を使い切るまでpytest緑を出せなかった)であり、judgeが欺瞞を検出したのではない。FN 13件は全て「agentが実際にpytest緑を生産したが、撒き種欠陥は潜んだまま」の形 — stdout tailでは構造的に不可視。→ **証拠レビュー単独の限界が実測で裏付けられ、replay検証層の存在理由そのものが数値化された**。行レベル記録は `eval/bench-20260930.md`・README表に実測値を反映済み。
+
+既知の限界(正直に記録): ①推論per-callトークン計量はv1未装備(単価は「sandbox無料(β)+≤9 calls/item」の表現に留める) ②感度はplanner強度に依存(より強いplannerなら緑到達率が上がり、judge単独の感度はさらに下がる構造) ③オフライン合成層との天井値分離は未実施。
