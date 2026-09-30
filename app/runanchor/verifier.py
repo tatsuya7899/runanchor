@@ -1,17 +1,20 @@
-"""Replay verification: fork the recorded start image, rerun the recorded
-command disposable (-D, never mutates history), and compare against the
-original receipt.
+"""Replay verification: fork the recorded start image in a dedicated
+verification session, rerun the recorded command disposable (-D — no session
+history mutation, no checkpoint garbage), and compare against the original
+receipt.
 
-Compared (per FR-5): exit_code, stdout/stderr fingerprints, result-image
-presence. Fingerprints are of normalized streams (see receipt.fingerprint)
-so legitimate non-determinism — elapsed times, timestamps — does not read as
-fabrication. 'mismatch' means "the replay differed": evidence for a human,
-not a proof of deceit.
+Compared (per FR-5): exit_code, stdout/stderr fingerprints. Fingerprints are
+of normalized streams (see receipt.fingerprint) so legitimate non-determinism
+— elapsed times, timestamps — does not read as fabrication. 'mismatch' means
+"the replay differed": evidence for a human, not a proof of deceit.
 
-CAUTION (tech validation #0 must confirm): the result-image comparison
-assumes a disposable (-D) rerun still reports result_image_uuid. If ConTree
-does not persist an end image for -D runs, this axis produces structural
-false mismatches and must be dropped or the rerun made non-disposable.
+Live-validated 2026-09-30 (#0): result_image_uuid CANNOT be a comparison
+axis. Disposable runs return result_image_uuid=null, and non-disposable
+checkpoints are NOT reproducible across sessions — identical commands on the
+identical start image produced different image UUIDs in different sessions
+(9d2dfa13… vs e82f0702…; same-session repeats only hit the session cache).
+End-state equivalence therefore stays out of the axes; exit code and output
+fingerprints carry the evidence.
 """
 
 from __future__ import annotations
@@ -49,11 +52,20 @@ def verify_receipt(receipt: Receipt, driver: Driver) -> VerifyResult:
             cwd=receipt.cwd,
             files=list(receipt.files),
             shell_mode=receipt.shell_mode,
-            disposable=True,
+            disposable=True,  # -D: the replay never mutates session history;
+                              # no checkpoint is needed since result images
+                              # are not a comparable axis (#0 measured)
         )
     except DriverError as e:
         return VerifyResult(receipt.receipt_id, "unverifiable",
                             {"driver": {"expected": "replayable", "actual": str(e)}})
+    finally:
+        # the dedicated verification session is single-use — release it
+        # whether the replay ran or not (DemoDriver.close() is a no-op)
+        try:
+            driver.close()
+        except Exception:
+            pass
 
     if rerun.status == "DRIVER_ERROR" or rerun.operation_uuid is None:
         # infra failure produced no real replay — this is "couldn't verify",
@@ -71,8 +83,6 @@ def verify_receipt(receipt: Receipt, driver: Driver) -> VerifyResult:
     check("exit_code", receipt.exit_code, rerun.exit_code)
     check("stdout_sha256", receipt.stdout_sha256, fingerprint(rerun.stdout))
     check("stderr_sha256", receipt.stderr_sha256, fingerprint(rerun.stderr))
-    check("result_image_present", bool(receipt.result_image_uuid),
-          bool(rerun.result_image_uuid))
 
     return VerifyResult(receipt.receipt_id, "match" if not diffs else "mismatch", diffs,
                         replay_operation_uuid=rerun.operation_uuid,

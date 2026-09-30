@@ -54,8 +54,8 @@ agent task ──► sandbox run (ConTree / Nebius Sandboxes)
         ┌────────┴─────────┐
         ▼                  ▼
   human approve      verify: fork recorded image,
-  or machine judge   rerun command, compare exit code
-        │            + stream fingerprints + result image
+  or machine judge   rerun command disposable,
+        │            compare exit code + stream fingerprints
         ▼                  │
    append-only ledger ◄────┘
    (pending → adopted / rejected / mismatch / unresolved;
@@ -74,17 +74,18 @@ provider's records — it cannot detect provider-side faults. The receipts make
 ## Token Factory / Nebius usage depth
 
 Each primitive below lists where it lives in code and what evidence backs it.
-"Live-verified" means an actual Token Factory call was made; unit coverage is
-the offline suite. Sandboxes rows are pending closed-beta access — the code
-paths are built and tested, the provider side is not yet exercised.
+"Live-verified" means an actual Token Factory / ConTree call was made; unit
+coverage is the offline suite.
 
 | primitive | where | evidence | live-verified |
 |-----------|-------|----------|---------------|
-| ConTree `run` (isolated sandbox exec) | `ContreeDriver.run()` | argv/anchor/degraded-run tests | pending beta |
-| ConTree `op show` (operation record → receipt anchor) | `ContreeDriver.run()` + `_parse_op` | uuid-capture, missing-field, `op show`-failure tests | pending beta |
-| ConTree `use <image>` (fork recorded env) | `verifier` via `ContreeDriver.use()` | replay-path tests | pending beta |
-| ConTree `run -D` (disposable verify rerun) | `verify_receipt` | disposable-flag test | pending beta — **#0 must confirm `result_image_uuid` is returned** |
-| ConTree `op events` (log stream) | `ContreeDriver.events()` | fixture + type-guard tests | pending beta |
+| ConTree `run` (isolated sandbox exec) | `ContreeDriver.run()` | argv/anchor/degraded-run tests | ✅ 2026-09-30 — real schema parsed (flat + `metadata.result.*` nested), op `01a0f15b-…` |
+| ConTree `op show` (operation record → receipt anchor) | `ContreeDriver.run()` fallback | uuid-capture, missing-field, `op show`-failure tests | ✅ 2026-09-30 — flat `result.{stdout,state.*}` shape measured |
+| ConTree `use <image>` (fork recorded env) | `verifier` via `ContreeDriver.use()` | replay-path tests | ✅ 2026-09-30 — replay forked `4fa16c8f…`, verify verdict `match` (e2e `scripts/e2e_live_runanchor.py`) |
+| ConTree `run -D` (disposable verify rerun) | `verify_receipt` | disposable-flag test | ✅ 2026-09-30 — `-D` returns `result_image_uuid: null`; replay uses `-D` (no checkpoint needed — see below) |
+| ConTree `op events` (log stream) | `ContreeDriver.events()` | fixture + type-guard tests | command exists; payload unverified |
+| ConTree `session delete` (verify-session cleanup) | `ContreeDriver.close()` | call-shape + cleanup-on-failure tests | ✅ 2026-09-30 — probe sessions deleted after verify |
+| `result_image_uuid` comparison | **dropped axis** | — | ✅ disproven 2026-09-30: checkpoints are not reproducible across sessions (identical command + identical start image → different UUIDs `9d2dfa13…` vs `e82f0702…`); comparing them would false-mismatch every honest run |
 | Token Factory chat completions — agent planner | `NemotronPlanner` (`agent_loop.py`) | action-parse, task-injection tests | ✅ 2026-09-29 (minimal call ≈ $0.000004) |
 | Token Factory chat completions — measurement judge | `NemotronJudge` (`judge.py`) | verdict-parse + secret-scrub tests | ✅ same API key, same endpoint |
 | `seed` parameter | planner/judge + `Receipt.seed` | seed-note metadata only | ✅ tested: accepted but **not deterministic** |

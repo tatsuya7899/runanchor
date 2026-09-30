@@ -144,3 +144,28 @@ contree -S verify_<receipt_id> op show HEAD         # exit_code/stdoutを比較
 3. **verifyは-Dを廃止しverify専用セッション+非使い捨てrunへ**(result_image_uuid比較軸を維持。セッションは`session delete <key> -y`で掃除)
 4. `status`の実語彙は`SUCCESS`/`FAILED`等(models.py準拠だが値域確認済み)
 5. セッションキー規約: `runanchor_<ledger>-<seq>`・verifyは`ra_verify_<receipt_id>`(-Sフラグ運用・env依存禁止は既設計どおり)
+
+## §7 追補(2026-09-30・同日) — e2e実施後の設計再修正: image一致軸は却下
+
+§4の判定を実装後のライブe2e(`scripts/e2e_live_runanchor.py`)が**覆した**。最終設計は再修正済み。
+
+### 追実測の結果
+
+| 実験 | 結果 |
+|---|---|
+| 同一セッション内・同一コマンド再実行 | 同一`result_image_uuid`(b2516231…/09a76e8d…) — 同一セッション内では再現する |
+| 別セッションへ`use <image_uuid>`でfork→run(fs非変化コマンド) | 同一image UUID(09a76e8dがそのまま = checkpointが親imageと同一) |
+| **別セッションで`use <同一base>`→`-C /work`の同一コマンド** | **image UUIDが毎回異なる**(work run=b27ae490…、verify run=04b80e1f…、probe6=9d2dfa13…、probe7=e82f0702…) |
+| e2e(`echo runanchor-e2e`@-C /work →receipt→verify) | exit_code/stdoutは一致・**result_image_uuidのみ不一致でmismatch判定** |
+
+### 解釈と確定設計
+
+- セッション内再現は**セッションキャッシュ**(同一session+parent+commandでのcheckpoint再利用)と推定。クロスセッションではcheckpointは非再現(workdir初期化等に実行ごとの識別子/時刻が混入する形)
+- **確定: `result_image_uuid`は比較軸から除外**。比較すると正直なrunまで全件mismatchになる構造的欠陥
+- verifyは**`-D`に復帰**(image比較を捨てたのでcheckpoint生成不要・副作用ゼロ・最安) + verify専用セッション + `close()`(=`session delete`)で掃除
+- 比較軸の最終形: `exit_code` + 正規化stdout指紋 + 正規化stderr指紋 の3軸。終了状態の等価性は測れないものとして正直に非対象とする
+- e2e実績: work op `01a0f15b-3f4b-7727-85d3-7c7df7113f47` → receipt `26c2bd0c` → replay op `01a0f15b-4911-76f7-b8b5-60e659c816eb` → **verdict `match`**
+
+### §4チェックリストの訂正
+
+§4の「同一コマンド再実行で同一result_image_uuid → 比較軸として生きる」は**同一セッション内に限る**と訂正。§4のverify専用セッション非disposable案はe2eで却下、`-D`復帰が確定。実装は`verifier.py`・`contree_driver.py`のdocstringに反映済み。

@@ -1,4 +1,9 @@
-"""Acceptance S5/S6: replay verification compares fork-and-rerun vs receipt."""
+"""Acceptance S5/S6: replay verification compares fork-and-rerun vs receipt.
+
+Live-validated 2026-09-30 (#0): replays run disposable (-D) inside a dedicated
+verification session; result_image_uuid is NOT a comparison axis — provider
+checkpoints are not reproducible across sessions (measured 2026-09-30).
+"""
 
 import pytest
 
@@ -28,6 +33,8 @@ class FakeDriver:
     """Replays a canned op record; can fail on use()/run() to simulate
     lost images or unexecutable replays."""
 
+    is_demo = False
+
     def __init__(self, replay: OperationRecord | None = None,
                  use_fails=False, run_fails=False):
         self.replay = replay
@@ -35,6 +42,7 @@ class FakeDriver:
         self.run_fails = run_fails
         self.used_images = []
         self.ran = []
+        self.closed = False
 
     def use(self, image):
         if self.use_fails:
@@ -51,6 +59,9 @@ class FakeDriver:
     def events(self, operation_uuid):
         return []
 
+    def close(self):
+        self.closed = True
+
 
 def test_matching_replay_is_match():
     orig = issue_receipt(op(), task="t", run_seq=1)
@@ -58,7 +69,20 @@ def test_matching_replay_is_match():
     result = verify_receipt(orig, driver)
     assert result.verdict == "match"
     assert driver.used_images == ["img-start"]
-    assert driver.ran[0]["disposable"] is True  # -D: verify never mutates history
+    # -D: the replay never mutates session history — image checkpoints are
+    # not a comparison axis (#0: not reproducible across sessions)
+    assert driver.ran[0]["disposable"] is True
+    # the dedicated verification session is released after use
+    assert driver.closed is True
+
+
+def test_cleanup_happens_even_when_replay_fails():
+    """An infra-failed replay still releases the verification session —
+    otherwise probes accumulate (beta cap: 50 concurrent ops)."""
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    driver = FakeDriver(run_fails=True)
+    assert verify_receipt(orig, driver).verdict == "unverifiable"
+    assert driver.closed is True
 
 
 def test_timing_jitter_is_not_a_mismatch():
@@ -82,6 +106,18 @@ def test_different_stdout_fingerprint_is_mismatch():
     result = verify_receipt(orig, driver)
     assert result.verdict == "mismatch"
     assert "stdout_sha256" in result.diffs
+
+
+def test_different_result_image_is_not_a_mismatch_axis():
+    """#0 measured: provider checkpoints are NOT reproducible across sessions
+    (identical command + identical start image -> different image UUIDs), so
+    result_image_uuid must stay OUT of the compared axes — comparing it would
+    structurally false-mismatch every honest run."""
+    orig = issue_receipt(op(), task="t", run_seq=1)
+    driver = FakeDriver(replay=op(result_image_uuid="img-different"))
+    result = verify_receipt(orig, driver)
+    assert result.verdict == "match"
+    assert "result_image_uuid" not in result.diffs
 
 
 def test_mismatch_fields_report_expected_vs_actual():
