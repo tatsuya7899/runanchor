@@ -312,3 +312,46 @@ v2計測後の第2回敵対レビュー(3系統・読み取り専用)がさら�
 - **唯一のFP `seeded-broken-harness`は意味論的境界** — タスク契約が構造的に不可能(触れないテストファイルに構文エラー)、oracleは生産物状態をpass・judgeは契約未達でreject
 - **`seeded-env-dependent`はverify unverifiable → label fallback** — 系列自体が`./test.sh`失踪ループで失敗・replay不能。偽mismatchを製造せず評価不能と分類した設計が正しく効いた
 - **残存リスクの正直記録**: agentがimage同梱interpreter/site-packages自体を改竄した場合はoracle隔離を踏み倒せる — 完全対策は未改変interpreterの持ち込み(将来課題として文書化済み)
+
+## §13 セッションクローズアウト記録(2026-09-30・v3確定時点)
+
+### 所在・コミット
+
+- **repoは `~/Developer/runanchor/` に移設済み**(`_incubator/runanchor`から昇格・旧コピーは掃除済み)。AGENTS.md等の`_incubator/runanchor`参照は旧パス名のまま残っている点だけ注意(実体は新パス)
+- git log(新しい順):
+  - `febdcb3` v3ライブベンチ実測(強化ハーネス): gate感度100%(5/5)・特異度97%
+  - `f9248c6` 第2回敵対レビュー対応: oracle隔離・注入遮断・計測衛生の強化
+  - `e1e96ad` 敵対レビュー対応: oracle真値+2層計測でv1の46%を撤回し再実測
+  - `60d6678` ライブベンチ実測(35件): 感度46%/特異度91% — 提出ゲート18/18達成
+- 作業ツリー: clean(追跡・未追跡の残存変更なし)
+
+### 検証状態(全て実測済み)
+
+| 検査 | 結果 |
+|---|---|
+| pytest | 138本 Green |
+| `scripts/validate_corpus.py` | 35 items・全oracle有効 |
+| `scripts/check_packaging.py` | PASS |
+| `scripts/ready.py` | **22/23**(残FAIL=動画URL/repo URLのOwner公開欄のみ=正しい待機状態) |
+| `runanchor check --ledger eval/bench-ledger-20260930-v3.jsonl` | ok: 291 snapshots / 219 receipts, hash chain intact |
+
+### ベンチ系譜(読み方)
+
+| 版 | 真値 | 結果 | 位置づけ |
+|---|---|---|---|
+| v1 | 植え付けlabel | 感度46% / 特異度91% | **撤回済み** — 「検出感度」でなく「judgeとlabelの一致率」だった(行レベル再審でFN大半が正直な修正と判明)。`bench-20260930-v1.*` |
+| v2 | 実行oracle | gate 100%/86%・evidence-only 86%/89% | **歴史的記録** — 強化前ハーネス。FP 4件は全件judgeパース失敗由来・oracleはまだ`/work`内実行だった。`bench-20260930-v2.*` |
+| **v3(現行)** | 実行oracle+label fallback 1件 | **gate 100%/97%・evidence-only 60%/93%** | 強化ハーネス(oracle隔離+retry+unparseable分離)。`bench-20260930-v3.*` |
+
+### 残タスク(全てOwner承認ゲート配下・AI側作業は尽きた)
+
+1. **動画実録画** — `scripts/record_demo.py`+`submit/demo-script.md`は準備済み。オフラインデモ(`demo`/`check`/`verify`の2軸実演)+台帳実録で構成可能
+2. **GitHub公開化** — repo URLが決まったら`submit/form-answers.md`の「OWNER ACTION REQUIRED」欄を埋める
+3. **フォーム転記・送信** — `submit/form-answers.md`の回答文はv3値で確定済み
+4. ready.py 23/23化は上記2・3の入力で自動的に解消
+
+### 再開時の一手
+
+- 追加実装・追加ベンチは不要。次は公開作業のみ
+- 新規ライブベンチを走らせる場合は再度Owner承認+見積提示が必須(クレジット規約)
+- 文書を改訂するときはv3の留保表現(分母5の小標本・2層非独立・label fallback 1件)を落とさないこと — README/BASELINE/form-answersの3箇所に複製されている
