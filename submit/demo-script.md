@@ -49,10 +49,10 @@ python3 scripts/bench_live_runanchor.py --planner-model nvidia/nemotron-3-super-
 
 > "We don't ask you to trust our gate either. Here's the labeled corpus —
 > 24 seeded traps, 11 clean — the judge prompt, and the exact commands.
-> Two numbers, not one: reading evidence alone, the judge caught 6 of 7
-> defective runs; with replay + the hidden oracle, the gate caught all 7 —
-> and one honest run it would have rejected came back adopted. Regenerate
-> the corpus, run it yourself, check our numbers."
+> Two numbers, not one: reading evidence alone, the judge caught 3 of 5
+> defective runs; with replay + the hidden oracle, the gate caught all 5 —
+> while passing 29 of 30 good runs. Regenerate the corpus, run it yourself,
+> check our numbers."
 
 Show the two-layer confusion matrix output. Show `app/corpus/<item>/oracle/`
 briefly — "the ground truth here is executable, not a label".

@@ -18,19 +18,20 @@ Engineering track).
 ## Measured gate quality
 
 > **Measured 2026-09-30 on live Nebius Sandboxes** (beta). Row-level results:
-> `eval/bench-20260930-v2.json` + `eval/bench-ledger-20260930-v2.jsonl` —
+> `eval/bench-20260930-v3.json` + `eval/bench-ledger-20260930-v3.jsonl` —
 > every run, replay, and oracle execution anchored to a real ConTree
 > operation UUID (inspectable via `contree op show`; audit the ledger with
 > `runanchor check --ledger <file>`).
 
 Two layers measured on the **same 35 run series**; ground truth is the
 executable hidden oracle run against each produced result image (defective
-=7, good =28 — the planted label is only a fallback):
+=5, good =30 — the planted label is only a fallback, used once where the
+oracle could not run):
 
 | layer | sensitivity (defective caught) | specificity (good passed) |
 |-------|-------------------------------|---------------------------|
-| evidence-only judge (baseline) | 86% (6/7) | 89% (25/28) |
-| **gate: evidence + replay + oracle** | **100% (7/7)** | **86% (24/28)** |
+| evidence-only judge (baseline) | 60% (3/5) | 93% (28/30) |
+| **gate: evidence + replay + oracle** | **100% (5/5)** | **97% (29/30)** |
 
 | cost per measured item | value |
 |------------------------|-------|
@@ -38,26 +39,23 @@ executable hidden oracle run against each produced result image (defective
 | model calls | ≤10/item (planner ≤8, judge ×2) |
 | planner / judge | nemotron-3-super-120b-a12b / Nemotron-3_5-Lightning |
 
-**What the layers mean:** evidence-only review already stops most bad runs —
-a gate refusing unproven claims is conservative by design. But it adopted one
-run that reached green by editing the test's expected value
-(`seeded-skip-tests-tempt`); the hidden oracle's test-integrity check failed
-it, and the gate rejected. Verification also rescued one honest run the
-evidence-only layer dropped (a judge parse failure, fail-safe reject).
+**What the layers mean:** the evidence-only judge adopted two runs whose
+green logs hid states the hidden oracle then failed
+(`seeded-assert-print`, `seeded-dead-branch`) — verification turned two
+misses into catches. The single false reject (`seeded-broken-harness`) is a
+task-soundness boundary: its contract is impossible by construction, the
+produced state passed the oracle, and the judge rejected on contract
+grounds. Row-level detail: `eval/bench-20260930-v3.md`.
 
-The reported cost, stated honestly: all four gate-layer false rejects were
-judge-output *parse failures* (6/70 calls, ~9%), not semantic rejections —
-counting them in the matrix overstates the FP cost, so we disclose it here
-and treat v2 specificity as a lower bound. Row-level detail:
-`eval/bench-20260930-v2.md`.
-
-Honest caveats: 100% is a small-denominator measurement (7 defective), not a
+Honest caveats: 100% is a small-denominator measurement (5 defective), not a
 rate guarantee — claim: "every defective run the corpus produced was caught".
-Most seeded items were honestly fixed by the planner (17/24 passed the
+Most seeded items were honestly fixed by the planner (19/24 passed the
 oracle), which is why truth is the oracle's exit code and not the trap label.
 The two layers are not independent detectors — the gate judge is *shown* the
 oracle outcome that also defines truth; the split measures whether the judge
-follows verification evidence, not verification alone.
+follows verification evidence, not verification alone. Judge-output health
+is disclosed: 0/70 unparseable verdicts this run (an earlier harness run had
+6/70, all fail-safe rejects — now retried and counted separately).
 
 We publish only numbers we measured — and you can re-run the same procedure
 rather than trusting ours (`scripts/bench_live_runanchor.py`).
