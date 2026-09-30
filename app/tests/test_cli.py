@@ -97,7 +97,9 @@ def test_run_without_credentials_fails_cleanly(tmp_path, capsys, monkeypatch):
 
 def test_check_reports_intact_ledger(ledger_path, capsys):
     assert main(["--ledger", str(ledger_path), "check"]) == 0
-    assert "hash chain intact" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "hash chain intact" in out
+    assert "snapshots" in out and "receipts" in out
 
 
 def test_check_detects_tampered_ledger(ledger_path, capsys):
@@ -109,3 +111,43 @@ def test_check_detects_tampered_ledger(ledger_path, capsys):
     ledger_path.write_text("\n".join(lines) + "\n")
     assert main(["--ledger", str(ledger_path), "check"]) == 1
     assert "CHAIN BROKEN" in capsys.readouterr().out
+
+
+def test_check_accepts_ledger_after_subcommand(ledger_path, capsys):
+    """`runanchor check --ledger <file>` must parse — the flag lives both
+    globally and on the subcommand."""
+    assert main(["check", "--ledger", str(ledger_path)]) == 0
+    assert "hash chain intact" in capsys.readouterr().out
+
+
+def test_check_missing_ledger_fails_closed(tmp_path, capsys):
+    """A nonexistent ledger must NOT report '0 receipts, chain intact' —
+    that would be a false-green audit."""
+    rc = main(["--ledger", str(tmp_path / "nope.jsonl"), "check"])
+    assert rc == 1
+    assert "not found" in capsys.readouterr().out
+
+
+def test_verify_scrubbed_receipt_is_unverifiable_exit3(tmp_path, capsys):
+    """A receipt whose recorded command was secret-scrubbed cannot be
+    replayed faithfully — verify exits 3 (unverifiable), distinct from
+    mismatch=1 and match=0."""
+    ledger_path = tmp_path / "l.jsonl"
+    ledger = Ledger(ledger_path)
+    r = issue_receipt(op(), task="t", run_seq=1)
+    ledger.append_receipt(r)
+    # forge a receipt whose command already carries the REDACTED marker by
+    # re-issuing with a secret-shaped command (issue_receipt scrubs it)
+    from runanchor.receipt import OperationRecord as Op
+    op2 = Op(operation_uuid="op-9", image_uuid="img-a",
+             result_image_uuid="img-b",
+             command="curl -H 'Bearer aaabbbcccdddeeefff' x", cwd="/work",
+             shell_mode=False, status="SUCCESS", exit_code=0,
+             stdout="ok\n", stderr="")
+    r2 = issue_receipt(op2, task="t", run_seq=2)
+    ledger.append_receipt(r2)
+    rc = main(["--ledger", str(ledger_path), "verify", r2.receipt_id,
+               "--driver", "demo"])
+    out = capsys.readouterr().out
+    assert rc == 3
+    assert "unverifiable" in out

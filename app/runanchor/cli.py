@@ -165,25 +165,16 @@ def _cmd_verify(args) -> int:
             print("       hint: --driver demo replays the recorded fixture")
             return 2
         driver = ContreeDriver(session=args.session)
-    oracle_files = []
-    if args.oracle_dir:
-        odir = Path(args.oracle_dir)
-        oracle_files = [
-            f"{p.resolve()}:/work/oracle/{p.relative_to(odir)}"
-            for p in sorted(odir.rglob("*")) if p.is_file()
-        ]
+    oracle_dir = Path(args.oracle_dir) if args.oracle_dir else None
     oracle_command = args.oracle_command
-    if oracle_files and not oracle_command:
-        from .bench import DEFAULT_ORACLE_COMMAND
+    if oracle_dir is not None and not oracle_command:
+        from .verifier import DEFAULT_ORACLE_COMMAND
         oracle_command = DEFAULT_ORACLE_COMMAND
-    try:
-        result = verify_receipt(r, driver,
-                                oracle_files=oracle_files,
-                                oracle_command=oracle_command)
-    except DriverError as e:
-        print(f"verify failed: {e}")
-        return 1
-    print(f"{result.verdict}  ({r.receipt_id[:8]})")
+    result = verify_receipt(r, driver,
+                            oracle_dir=oracle_dir,
+                            oracle_command=oracle_command)
+    print(f"{result.verdict}  ({r.receipt_id[:8]})"
+          f"  replay={result.replay_verdict}")
     for name, diff in result.diffs.items():
         print(f"  {name}: expected={diff['expected']} actual={diff['actual']}")
     if result.replay_operation_uuid:
@@ -195,6 +186,7 @@ def _cmd_verify(args) -> int:
     # the verification attempt itself is evidence — record every verdict
     ledger.record_verification(
         r.receipt_id, result.verdict, result.diffs,
+        replay_verdict=result.replay_verdict,
         replay_operation_uuid=result.replay_operation_uuid,
         replay_anchor_source=result.replay_anchor_source,
         oracle=result.oracle,
@@ -205,20 +197,23 @@ def _cmd_verify(args) -> int:
             ledger.decide(r.receipt_id, "mismatch", by="verifier",
                           reason="replay differs from recorded receipt")
         except InvalidTransition:
-            pass  # already mismatch (re-verify) — evidence recorded above
-    return 0 if result.verdict == "match" else 1
+            pass  # already decided/mismatch — evidence recorded above
+    return {"match": 0, "mismatch": 1}.get(result.verdict, 3)
 
 
 def _cmd_check(args) -> int:
     """Audit a ledger file: hash-chain integrity + corrupt lines."""
+    path = Path(args.ledger)
+    if not path.exists():
+        # missing ledger must fail closed — "0 receipts, chain intact" on a
+        # deleted file would be a false-green audit
+        print(f"error: ledger not found: {args.ledger}")
+        return 1
     ledger = Ledger(args.ledger)
     broken = ledger.check_integrity()
     corrupt = ledger.corrupt_lines()
-    try:
-        lines = sum(1 for l in Path(args.ledger).read_text(
-            encoding="utf-8").splitlines() if l.strip())
-    except OSError:
-        lines = 0
+    lines = sum(1 for l in path.read_text(
+        encoding="utf-8").splitlines() if l.strip())
     n = len(ledger.all())
     if broken:
         print(f"CHAIN BROKEN at lines {broken}")
@@ -311,7 +306,11 @@ def build_parser() -> argparse.ArgumentParser:
                      help="recorded on receipts; NOT a replay guarantee (API ignores it)")
 
     sub.add_parser("list", help="list receipts")
-    sub.add_parser("check", help="audit ledger hash-chain integrity")
+    check_p = sub.add_parser("check", help="audit ledger hash-chain integrity")
+    # --ledger may also appear after the subcommand; SUPPRESS keeps the
+    # global option's value when it isn't repeated here
+    check_p.add_argument("--ledger", default=argparse.SUPPRESS,
+                         help="ledger path (same as the global option)")
     show = sub.add_parser("show", help="show a receipt (full id or unique prefix)")
     show.add_argument("receipt_id")
 
@@ -332,11 +331,12 @@ def build_parser() -> argparse.ArgumentParser:
     # separate session so verify's image fork doesn't rewind the work session
     verify.add_argument("--session", default="runanchor-verify")
     verify.add_argument("--oracle-dir", default=None,
-                        help="hidden oracle directory to mount at /work/oracle "
-                             "and run against the produced result image")
+                        help="hidden oracle directory — mounted OUTSIDE the "
+                             "workspace at an unpredictable path and run "
+                             "against the produced result image")
     verify.add_argument("--oracle-command", default=None,
-                        help="command for the oracle check "
-                             "(default when --oracle-dir: 'python3 -m pytest -q oracle/')")
+                        help="oracle command template "
+                             "(default: the isolated `python3 -I -S` runner)")
     return p
 
 

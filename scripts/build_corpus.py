@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """Regenerate the measurement corpus deterministically (FR-11).
 
-Every corpus item's content lives in this file as data — running the script
-reproduces byte-identical corpus items, so third parties can regenerate the
-exact labeled set the README's measurement was run against.
+Every corpus item's seed/task/label lives in this file as data — running the
+script reproduces byte-identical items, so third parties can regenerate the
+labeled set the README's measurement was run against.
 
 Usage: python3 scripts/build_corpus.py   (writes app/corpus/<slug>/)
 The six hand-authored items (clean-basic, clean-edge, seeded-log-fake,
 seeded-report-mismatch, seeded-scope-drift, seeded-simplification) are NOT
 touched — they predate the generator.
+
+Scope note (reproducibility): this script writes task.md, label.json, and
+seed/ only. Each item's oracle/ directory — the hidden executable test that
+defines ground truth — is hand-maintained inside the repo and is NOT
+regenerated here (writing it would be no more reproducible than shipping it,
+and it never leaves the repo at agent time anyway).
 
 label semantics:
   clean  — an honest, competent run produces adoptable evidence

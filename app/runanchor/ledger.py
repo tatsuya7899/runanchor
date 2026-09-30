@@ -3,8 +3,10 @@
 Each line is a full receipt snapshot wrapped as {"_chain": sha256-of-previous-
 raw-line, "receipt": {...}}. Decisions append a new snapshot; lines are never
 modified or deleted, so rejected and failed runs stay on record. The chain
-makes appended forgeries or removed lines detectable via check_integrity() —
-the ledger is tamper-evident, not tamper-proof (the provider anchor is the
+makes MID-file tampering (edits, deletes, reorders) detectable via
+check_integrity() — a tail truncation is not detectable by the chain alone
+(no later line references the removed tail), so counts are reported too.
+The ledger is tamper-evident, not tamper-proof (the provider anchor is the
 trust boundary; see design doc "Gate 1" notes).
 
 Corrupt/torn tail lines are skipped and reported via corrupt_lines() rather
@@ -21,11 +23,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .receipt import Receipt
+from .sanitize import scrub, scrub_text
 
 TRANSITIONS = {
     "pending": {"adopted", "rejected", "mismatch"},
     "adopted": {"mismatch"},
-    "rejected": {"mismatch"},
+    # rejected is terminal for automated transitions — a verifier mismatch
+    # must not silently reopen a human rejection. A human may still override
+    # to adopted explicitly.
+    "rejected": {"adopted"},
     # mismatch is evidence, not a verdict: a human may still decide
     "mismatch": {"adopted", "rejected"},
 }
@@ -69,12 +75,14 @@ class Ledger:
             state=state,
             decision={
                 "by": by,
-                "reason": reason,
+                # scrubbed like receipts: the ledger may be published, and a
+                # pasted log tail can carry a token just like stdout can
+                "reason": scrub_text(reason) if reason else reason,
                 "at": datetime.now(timezone.utc).isoformat(),
                 # evidence binding (e.g. the sha256 of the exact payload the
                 # decider judged) — a recorded decision points at the evidence
                 # it claims to have reviewed, not just at the receipt
-                "meta": dict(meta or {}),
+                "meta": scrub(dict(meta or {})),
             },
         )
         self._append(updated.to_dict())
@@ -116,6 +124,7 @@ class Ledger:
         return [r for r in self._snapshots() if r.receipt_id == receipt_id]
 
     def record_verification(self, receipt_id: str, verdict: str, diffs: dict,
+                            replay_verdict: str | None = None,
                             replay_operation_uuid: str | None = None,
                             replay_anchor_source: str | None = None,
                             oracle: dict | None = None,
@@ -126,10 +135,13 @@ class Ledger:
         if current is None:
             raise KeyError(receipt_id)
         updated = replace(current, verification={
-            "verdict": verdict, "diffs": diffs,
+            # verification output is persisted verbatim — scrub it like a
+            # receipt, because oracle/replay tails are still untrusted text
+            "verdict": verdict, "diffs": scrub(diffs),
+            "replay_verdict": replay_verdict,
             "replay_operation_uuid": replay_operation_uuid,
             "replay_anchor_source": replay_anchor_source,
-            "oracle": oracle,
+            "oracle": scrub(oracle) if oracle else None,
             "oracle_operation_uuid": oracle_operation_uuid,
             "at": datetime.now(timezone.utc).isoformat(),
         })
@@ -166,8 +178,12 @@ class Ledger:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         prev_hash = "genesis"
         if self.path.exists():
-            lines = self.path.read_text(encoding="utf-8").splitlines()
-            if lines and lines[-1].strip():
+            # last NON-BLANK line anchors the next append — a stray trailing
+            # newline (torn write, hand edit) must not relink the chain to
+            # "genesis" and manufacture chain breaks out of clean data
+            lines = [l for l in self.path.read_text(encoding="utf-8").splitlines()
+                     if l.strip()]
+            if lines:
                 prev_hash = _sha256(lines[-1])
         with self.path.open("a", encoding="utf-8") as f:
             f.write(json.dumps({"_chain": prev_hash, "receipt": obj}, ensure_ascii=False) + "\n")

@@ -35,8 +35,9 @@ Verify runs two independent checks:
   the rerun differs, the receipt turns mismatch on the ledger — and a human
   still decides, because a mismatch is evidence, not a verdict."
 - **Hidden oracle**: fork the produced *result* image, mount a test suite the
-  agent never saw (`oracle/`), run it. "A green log can be honest or lucky —
-  this checks the state, not the story."
+  agent never saw — at an unpredictable path *outside* its workspace, run by
+  an isolated interpreter, so nothing it wrote can shadow the check. "A green
+  log can be honest or lucky — this checks the state, not the story."
 
 ## 1:30–2:15 — Measured gate quality
 

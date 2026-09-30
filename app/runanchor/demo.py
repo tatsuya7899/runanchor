@@ -14,7 +14,7 @@ from .contree_driver import DemoDriver
 from .gate import Gate
 from .ledger import Ledger
 from .receipt import issue_receipt
-from .verifier import verify_receipt
+from .verifier import DEFAULT_ORACLE_COMMAND, verify_receipt
 
 DEMO_TASK = "demo-fix-sort"
 
@@ -49,7 +49,7 @@ def run_demo(fixture_dir, ledger_path) -> dict:
         final, verify_driver,
         # hidden-oracle stage: the fixture's second op plays the oracle run —
         # a suite the demo "agent" never saw, executed on the result image
-        oracle_command="python3 -m pytest -q oracle/",
+        oracle_command=DEFAULT_ORACLE_COMMAND,
     )
     lines.append(f"[DEMO] verify {final.receipt_id[:8]}: {result.verdict}")
     if result.oracle is not None:

@@ -45,6 +45,37 @@ def test_unparseable_output_defaults_to_reject():
     assert "unparseable" in v.reason.lower() or "invalid" in v.reason.lower()
 
 
+def test_unparseable_retries_once_then_recovers():
+    """Truncated reasoning is transiently recoverable — one retry before
+    the fail-safe verdict sticks."""
+    calls = []
+    payloads = iter([
+        {"choices": [{"message": {"content": "half-formed reasoning, no json"}}]},
+        {"choices": [{"message": {"content": '{"decision": "adopt", "reason": "ok"}'}}]},
+    ])
+
+    def fake_post(url, headers, body):
+        calls.append(body)
+        return next(payloads)
+
+    v = NemotronJudge(api_key="k", model="m", http_post=fake_post).review(EVIDENCE)
+    assert v.decision == "adopt"
+    assert v.unparseable is False
+    assert len(calls) == 2
+
+
+def test_double_unparseable_is_flagged_for_separate_accounting():
+    """Two bad replies -> fail-safe reject, flagged unparseable so the
+    benchmark counts it separately from a semantic reject (a parse failure
+    is not evidence against the run)."""
+    payload = {"choices": [{"message": {"content": "no json at all"}}]}
+    calls = []
+    v = judge_with(payload, calls).review(EVIDENCE)
+    assert v.decision == "reject"
+    assert v.unparseable is True
+    assert len(calls) == 2  # exactly one retry, not a loop
+
+
 def test_invalid_decision_value_defaults_to_reject():
     payload = {"choices": [{"message": {"content": '{"decision": "maybe"}'}}]}
     v = judge_with(payload).review(EVIDENCE)

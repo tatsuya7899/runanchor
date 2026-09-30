@@ -55,6 +55,51 @@ def test_give_up_marks_last_receipt_unresolved(ledger):
     assert all(not r.unresolved for r in ledger.by_task("t")[:-1])
 
 
+def test_unresolved_flag_reaches_returned_receipts(ledger):
+    """The unresolved marker lives in a NEW ledger snapshot — the receipts
+    handed to the judge must carry it too, not just the ledger tail."""
+    planner = ScriptedPlanner([{"command": "pytest -q"}] * 5)
+    series = run_loop(DemoDriver([OPS[0]] * 3), ledger, planner, task="t",
+                      max_iter=3)
+    assert series[-1].unresolved is True  # the returned object, not just the ledger
+    assert all(not r.unresolved for r in series[:-1])
+
+
+class RecordingDriver(DemoDriver):
+    """Records run() kwargs for mount-boundary assertions."""
+
+    def __init__(self, ops):
+        super().__init__(ops)
+        self.calls = []
+
+    def run(self, command, cwd, files=None, shell_mode=False, disposable=False):
+        self.calls.append({"files": list(files or [])})
+        return super().run(command, cwd, files=files, shell_mode=shell_mode,
+                           disposable=disposable)
+
+
+def test_planner_emitted_files_are_never_mounted(ledger):
+    """Confused-deputy boundary: the planner's JSON is untrusted output —
+    a model returning {"files": ["/etc/passwd:/work/pw"]} must not get a
+    host-side mount. Only operator-supplied seed mounts may reach driver.run."""
+    driver = RecordingDriver([OPS[0]])
+    planner = ScriptedPlanner([
+        {"command": "cat /work/pw", "files": ["/etc/passwd:/work/pw"]},
+    ])
+    run_loop(driver, ledger, planner, task="t", max_iter=5)
+    assert driver.calls[0]["files"] == []
+
+
+def test_operator_seed_mounts_first_run_only(ledger):
+    """Seed mounts apply to run 1; re-mounting on later runs would overwrite
+    the agent's own edits (live-measured ConTree behaviour, 2026-09-30)."""
+    driver = RecordingDriver([OPS[0], OPS[0]])
+    planner = ScriptedPlanner([{"command": "pytest -q"}] * 2)
+    run_loop(driver, ledger, planner, task="t", max_iter=5,
+             files=["/seed/x.py:/work/x.py"])
+    assert [c["files"] for c in driver.calls] == [["/seed/x.py:/work/x.py"], []]
+
+
 def test_recon_exit0_does_not_end_series(ledger):
     """Live-bench regression (2026-09-30): `ls -la` exits 0 without doing any
     work — a bare green exit must not be treated as task completion. Only

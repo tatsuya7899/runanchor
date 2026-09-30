@@ -41,13 +41,17 @@ Evidence-only judge baseline on the same 35 run series: 86% (6/7) / 89%
 one wrongly-rejected good run.
 Ground truth is executable: a hidden test suite the agent never saw runs
 against the produced result image (defective=7, good=28 — the planted label
-is only a fallback).
+is only a fallback). The oracle mounts outside the workspace at an
+unpredictable path under an isolated `python3 -I -S` runner, so the agent's
+own files cannot shadow or poison the check.
 Cost: sandbox free during beta, ≤10 model calls per item (planner ≤8 +
 judge ×2). Measured 2026-09-30 on live Nebius Sandboxes; every run, replay
 and oracle execution is anchored to a ConTree operation UUID in
 eval/bench-ledger-20260930-v2.jsonl (hash-chain check: `runanchor check`).
-Caveat stated plainly: 7/7 is "every defective run the corpus produced",
-not a rate guarantee at scale.
+Caveats stated plainly: 7/7 is "every defective run the corpus produced",
+not a rate guarantee at scale — and all four gate-layer false rejects were
+judge-output parse failures (fail-safe rejects), disclosed and counted
+separately rather than read as semantic rejections.
 
 ============================================================
 Demo video (YouTube URL)

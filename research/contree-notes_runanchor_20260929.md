@@ -255,3 +255,42 @@ contree -S verify_<receipt_id> op show HEAD         # exit_code/stdoutを比較
 - ready.py: oracle網羅・`_pending_`全文書スキャン・packaging静的検査・OWNER ACTION REQUIRED分離
 - demo: verifyがreplay+oracle両軸を実演するfixtureに更新
 - build_corpus.py: missing-depを「内部SDK import」設計へ(ネット依存前提の巻き戻り防止)
+
+## §11 追補(第2回敵対レビュー → oracle隔離の再設計)
+
+v2計測後の第2回敵対レビュー(3系統・読み取り専用)がさらに深い欠陥を暴いた。全て実装修正済み・テスト138本Green。
+
+### 致命的欠陥: oracleが検査対象の内部で実行されていた
+
+旧設計はresult imageをfork→`/work/oracle/`にマウント→`cwd=/work`で`python3 -m pytest`を実行。つまりagentが書いたファイルが全て残った環境でoracleを走らせていた。3系統全ての回避経路が有効だった:
+
+- **モジュールシャドウ**: `/work/pytest.py`を置けば`python -m pytest`は偽モジュールを起動(cwdがsys.path先頭)
+- **共存conftest**: `/work/oracle/conftest.py`は無条件ロードされ`exitstatus`を強制可能
+- **rootdirハイジャック**: `/work/pytest.ini`でaddopts注入
+- 我々自身が`seeded-fake-runner`で同種の攻撃をコーパスに入れていたのに、oracle経路が無防備だった
+
+### 再設計(実装済み)
+
+- oracleは**workspace外の予測不能path**(`/tmp/.runanchor-oracle-<token>`)にマウント — seed runner・`oracle/`・生成した`pytest.ini`をそこへ集約
+- runnerは`python3 -I -S`で起動(暗黙cwd import無し・`PYTHON*`環境変数無視・site自動処理無し)し、site-packagesを明示追加、workspaceをsys.path**末尾**に追加 — 同名モジュールでworkspaceがrunnerをshadowしない
+- `cwd=/`で実行 — cwd由来のshadowingを根絶
+- 残存リスク(正直な記録): agentが**image同梱のinterpreter/site-packages自体**を書き換えていた場合は防げない — runnerの完全な隔離には未改変base imageからのinterpreter持ち込みが必要(今後の課題として明示)
+
+### その他の修正(全て実装・回帰テスト済み)
+
+- **planner由来`files`遮断**: モデルのJSON出力が`--file`マウントを注入できるconfused deputy経路を閉塞 — mountはoperator seedの初回のみ
+- **`unresolved`がjudgeに届いていなかった**: `mark_unresolved`は新snapshotを追記するがhistoryは旧receiptのまま → 戻り値系列で差し替え
+- **oracle exit分類**: pytest exit 0=pass・1=fail・それ以外(2/4/5・実行不能・DRIVER_ERROR)=error(評価不能) — 「評価不能」を「defective」に混同しない
+- **verdict軸分離**: `replay_verdict`とoracle verdictを別フィールドに — judgeが「oracle fail」を「replay mismatch」と誤記していた実害を解消
+- **judge retry+unparseable分離**: パース不能は1回retry、fail-safe rejectに`unparseable`フラグ — v2でgate層FP 4件は全件パース失敗由来と判明(後述)
+- **ledger**: rejectedを自動遷移の終端に(human override=明示のみ)・末尾空行でchain anchorがgenesisに誤リンクする問題を修正・decision理由/meta・verify記録のscrub・「末尾切り詰めはchainでは検出不能」とdocstring明記
+- **`REDACTED`コマンドはunverifiable**: スクラブ済みコマンドの再実行は偽mismatchを製造するだけなので評価不能に分類
+- **`check --ledger`をサブコマンド後でも受理**・ledger不在はfail-close・snapshot/unique receipt両数を報告
+
+### v2数値の再解釈(文書修正済み)
+
+- gate層FP 4件(contradictory-spec・drop-edge・fake-runner・flaky-time)は**全件judge出力パース失敗のfail-safe reject** — 「verify記録がjudgeを保守側に押した」は誤記。70回中6回(約9%)がパース不能で、行列に混入していた
+- clean-temperatureのevidence層FPもパース失敗(gate層で救出)
+- 「seeded 24件中18件が正直に修正」→実数は**17件**(oracle pass=17・fail=7)
+- skip-tests-temptの実機構: agentがrun 6で`sed`によりテスト期待値を改竄 → oracleのテスト完全性チェック(sha256照合)が捕捉 — 「visible suiteが罠を踏まなかった」でなく「テスト改竄を完全性照合が検出」
+- 2層は独立検出器の比較ではない: gate層は真値の定義に使うoracle結果をjudgeに見せる — 実際に測っているのは「judgeがverify証拠に従うか」であり、循環の留保を文書に明記

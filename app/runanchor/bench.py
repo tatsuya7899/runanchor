@@ -29,7 +29,9 @@ from pathlib import Path
 
 from .agent_loop import run_loop
 from .gate import Gate
+from .judge import sanitize_evidence
 from .ledger import Ledger
+from .verifier import DEFAULT_ORACLE_COMMAND
 
 
 class CorpusError(Exception):
@@ -50,7 +52,6 @@ class CorpusItem:
 
 
 VALID_LABELS = {"seeded", "clean"}
-DEFAULT_ORACLE_COMMAND = "python3 -m pytest -q oracle/"
 
 
 def load_corpus(corpus_dir) -> list[CorpusItem]:
@@ -137,10 +138,16 @@ def _evidence(receipts, item) -> dict:
 
 
 def _verify_block(verify_result) -> dict | None:
+    """The verification record the judge sees at the gate layer. The two axes
+    are kept distinct — conflating them once made the judge claim "replay
+    mismatch" for what was actually an oracle failure."""
     if verify_result is None:
         return None
-    block = {"replay_verdict": verify_result.verdict,
-             "replay_diffs": verify_result.diffs}
+    replay_diffs = {k: v for k, v in verify_result.diffs.items()
+                    if k != "oracle"}
+    block = {"verdict": verify_result.verdict,
+             "replay_verdict": verify_result.replay_verdict,
+             "replay_diffs": replay_diffs}
     if verify_result.oracle is not None:
         # the judge sees the oracle's outcome AND its output tail — a bare
         # "fail" without output is unreasoned rejection bait
@@ -176,10 +183,6 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
             f"{p.resolve()}:/work/{p.relative_to(item.seed_dir)}"
             for p in sorted(item.seed_dir.rglob("*")) if p.is_file()
         ]
-        oracle_files = [
-            f"{p.resolve()}:/work/oracle/{p.relative_to(item.oracle_dir)}"
-            for p in sorted(item.oracle_dir.rglob("*")) if p.is_file()
-        ] if item.oracle_dir else []
 
         driver = None
         try:
@@ -220,12 +223,13 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
                 from .verifier import verify_receipt
                 verify_result = verify_receipt(
                     final, vdriver,
-                    oracle_files=oracle_files,
+                    oracle_dir=item.oracle_dir,
                     oracle_command=item.oracle_command,
                 )
                 ledger.record_verification(
                     final.receipt_id, verify_result.verdict,
                     verify_result.diffs,
+                    replay_verdict=verify_result.replay_verdict,
                     replay_operation_uuid=verify_result.replay_operation_uuid,
                     replay_anchor_source=verify_result.replay_anchor_source,
                     oracle=verify_result.oracle,
@@ -244,18 +248,19 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
         # --- ground truth --------------------------------------------------
         # The hidden oracle decides what the produced state actually is:
         # oracle fail = defective run (whatever the log showed), oracle pass =
-        # good run. No oracle -> fall back to the seed's planted-trap label.
+        # good run. Oracle "error"/none = could not evaluate -> the planted
+        # label is the fallback, and the row is marked accordingly.
         oracle_v = verify_result.oracle_verdict if verify_result else None
         if oracle_v == "fail":
-            truth = "defective"
+            truth, truth_source = "defective", "oracle"
         elif oracle_v == "pass":
-            truth = "good"
+            truth, truth_source = "good", "oracle"
         else:
-            truth = "defective" if item.label == "seeded" else "good"
+            truth, truth_source = (
+                ("defective" if item.label == "seeded" else "good"), "label")
 
         # --- two-layer judgment --------------------------------------------
         evidence = _evidence(series, item)
-        evidence_hash = _evidence_sha(evidence)
         try:
             ev_verdict = judge.review(evidence)
         except Exception as e:  # noqa: BLE001
@@ -278,43 +283,60 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
             cnt[_matrix_cell(truth, predicted)] += 1
 
         # the ledger decision records the GATE verdict bound to the evidence
-        # hash it was judged on — the decision is falsifiable, not free text
+        # hash it was judged on — the judge sees the SANITIZED payload, so
+        # that sanitized form is what the hash binds to
         final = ledger.get(final.receipt_id)  # post-verification snapshot
+        meta = {
+            "evidence_sha256": _evidence_sha(sanitize_evidence(gate_evidence)),
+            "evidence_layer_sha256": _evidence_sha(sanitize_evidence(evidence)),
+        }
         if gate_verdict.decision == "adopt":
             gate.approve(final.receipt_id, by=f"judge:{getattr(judge, 'model', 'fake')}",
-                         reason=gate_verdict.reason,
-                         meta={"evidence_sha256": _evidence_sha(gate_evidence)})
+                         reason=gate_verdict.reason, meta=meta)
             predicted = "adopted"
         else:
             gate.reject(final.receipt_id, by=f"judge:{getattr(judge, 'model', 'fake')}",
-                        reason=gate_verdict.reason,
-                        meta={"evidence_sha256": _evidence_sha(gate_evidence)})
+                        reason=gate_verdict.reason, meta=meta)
             predicted = "rejected"
 
         rows.append({
             "slug": item.slug, "label": item.label, "bug_type": item.bug_type,
-            "truth": truth,
+            "truth": truth, "truth_source": truth_source,
             "predicted": predicted,
             "predicted_evidence_only": "adopted" if ev_verdict.decision == "adopt" else "rejected",
             "correct": _matrix_cell(truth, predicted) in ("tp", "tn"),
             "oracle": oracle_v,
             "verify": verify_result.verdict if verify_result else None,
+            "replay_verdict": verify_result.replay_verdict if verify_result else None,
             "verify_error": verify_error,
             "verdict_reason": gate_verdict.reason,
             "evidence_verdict_reason": ev_verdict.reason,
+            "gate_unparseable": gate_verdict.unparseable,
+            "evidence_unparseable": ev_verdict.unparseable,
             "runs": len(series),
         })
 
+    truth_src = "oracle"
+    if not any(r.get("truth_source") == "oracle" for r in rows):
+        truth_src = "label"
+    elif any(r.get("truth_source") == "label" for r in rows):
+        truth_src = "oracle+label-fallback"
     report = BenchReport(ConfusionMatrix(**counts),
-                         ConfusionMatrix(**counts_evidence), rows, [])
+                         ConfusionMatrix(**counts_evidence), rows, [],
+                         truth_source=truth_src)
     sens, spec = report.sensitivity, report.specificity
     em = report.evidence_matrix
     e_sens = em.tp / (em.tp + em.fn) if (em.tp + em.fn) else None
     e_spec = em.tn / (em.tn + em.fp) if (em.tn + em.fp) else None
     n_def = sum(1 for r in rows if r.get("truth") == "defective")
     n_good = sum(1 for r in rows if r.get("truth") == "good")
+    n_unp_gate = sum(1 for r in rows if r.get("gate_unparseable"))
+    n_unp_ev = sum(1 for r in rows if r.get("evidence_unparseable"))
+    n_unp = sum(1 for r in rows
+                if r.get("gate_unparseable") or r.get("evidence_unparseable"))
     lines = [
-        f"bench: n={report.n} (defective={n_def}, good={n_good}; truth=oracle where runnable)",
+        f"bench: n={report.n} (defective={n_def}, good={n_good}; "
+        f"truth={truth_src})",
         "  gate layer (evidence + replay + oracle):",
         f"    sensitivity (bad runs caught): {'n/a' if sens is None else f'{sens:.0%}'}",
         f"    specificity (good runs passed): {'n/a' if spec is None else f'{spec:.0%}'}",
@@ -323,6 +345,11 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
         f"    sensitivity: {'n/a' if e_sens is None else f'{e_sens:.0%}'}",
         f"    specificity: {'n/a' if e_spec is None else f'{e_spec:.0%}'}",
         f"    tp={em.tp} fn={em.fn} tn={em.tn} fp={em.fp}",
+        # judge output health is measurement hygiene, not semantics — a parse
+        # failure defaults to reject and must be counted out loud
+        f"  judge output: {n_unp} item(s) had an unparseable verdict"
+        f" (gate={n_unp_gate}, evidence={n_unp_ev}; fail-safe counts them"
+        " as reject)",
         "",
         "per-item:",
     ]

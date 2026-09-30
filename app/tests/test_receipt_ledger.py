@@ -199,6 +199,19 @@ class TestLedger:
                                 reason="confirmed fabrication")
         assert updated.state == "rejected"
 
+    def test_rejected_is_terminal_for_automated_transitions(self, ledger):
+        """A verifier mismatch must not silently reopen a human rejection —
+        rejected only moves via an explicit human override to adopted."""
+        r = issue_receipt(make_op(), task="t", run_seq=1)
+        ledger.append_receipt(r)
+        ledger.decide(r.receipt_id, "rejected", by="judge:x", reason="fake log")
+        with pytest.raises(InvalidTransition):
+            ledger.decide(r.receipt_id, "mismatch", by="verifier",
+                          reason="replay differs")
+        # explicit human override remains possible
+        updated = ledger.decide(r.receipt_id, "adopted", by="human")
+        assert updated.state == "adopted"
+
     def test_history_preserves_all_snapshots(self, ledger):
         r = issue_receipt(make_op(), task="t", run_seq=1)
         ledger.append_receipt(r)
@@ -237,6 +250,18 @@ class TestIntegrity:
             f.write('{"_chain": "x", "receipt": {"receip')  # torn write
         assert len(ledger.all()) == 1          # good rows still readable
         assert ledger.corrupt_lines() == [2]   # and the damage is visible
+
+    def test_trailing_blank_line_does_not_relink_to_genesis(self, tmp_path):
+        """A stray blank tail line (torn write, hand edit) must not reset the
+        next append's chain anchor to 'genesis' — that manufactured chain
+        breaks out of clean data."""
+        path = tmp_path / "receipts.jsonl"
+        ledger = Ledger(path)
+        ledger.append_receipt(issue_receipt(make_op(), task="t", run_seq=1))
+        with path.open("a") as f:
+            f.write("\n")  # stray blank line
+        ledger.append_receipt(issue_receipt(make_op(), task="t", run_seq=2))
+        assert ledger.check_integrity() == []
 
 
 class TestVerificationEvidence:
@@ -279,6 +304,34 @@ class TestVerificationEvidence:
         updated = ledger.decide(r.receipt_id, "adopted", by="judge:x",
                                 meta={"evidence_sha256": h})
         assert updated.decision["meta"]["evidence_sha256"] == h
+
+    def test_decision_reason_and_meta_are_scrubbed(self, ledger):
+        """A reject reason often quotes the offending log line — which can
+        carry a token. Decision fields get the same scrubbing as receipts."""
+        r = issue_receipt(make_op(), task="t", run_seq=1)
+        ledger.append_receipt(r)
+        updated = ledger.decide(
+            r.receipt_id, "rejected", by="judge:x",
+            reason="log contained token: sk-abc123def456ghi789",
+            meta={"note": "key=Bearer aaa.bbb.ccc"})
+        blob = json.dumps(updated.decision)
+        assert "sk-abc123def456ghi789" not in blob
+        assert "aaa.bbb.ccc" not in blob
+
+    def test_verification_evidence_is_scrubbed(self, ledger):
+        """Replay/oracle tails are untrusted text persisted verbatim — a
+        secret-looking string in a diff must be redacted before storage."""
+        r = issue_receipt(make_op(), task="t", run_seq=1)
+        ledger.append_receipt(r)
+        updated = ledger.record_verification(
+            r.receipt_id, "mismatch",
+            {"stdout_sha256": {"expected": "x",
+                               "actual": "token: sk-abc123def456ghi789"}},
+            oracle={"verdict": "fail",
+                    "stdout_tail": "Bearer aaa.bbb.ccc leaked"})
+        blob = json.dumps(updated.verification)
+        assert "sk-abc123def456ghi789" not in blob
+        assert "aaa.bbb.ccc" not in blob
 
     def test_warnings_are_scrubbed_before_persistence(self):
         """P1-C: parse_warnings (which embed driver stderr) must not leak

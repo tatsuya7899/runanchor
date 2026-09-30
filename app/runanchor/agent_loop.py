@@ -158,8 +158,11 @@ def run_loop(
             op = driver.run(
                 action["command"],
                 cwd=action.get("cwd", "/work"),
-                files=(base_files if not history else [])
-                      + list(action.get("files") or []),
+                # Only the operator's seed mounts are passed — planner-emitted
+                # "files" are ignored: a model must not inject host-side paths
+                # into --file mounts (confused-deputy boundary; the model's
+                # JSON is not a trusted mount spec).
+                files=base_files if not history else [],
                 shell_mode=action.get("shell_mode", False),
             )
         except Exception:
@@ -180,5 +183,8 @@ def run_loop(
     # (`ls`, `cat`) exits 0 without demonstrating anything. Only the planner's
     # `done`, a planner/driver failure, an empty command, or max_iter ends it.
     if history and history[-1].exit_code != 0:
-        ledger.mark_unresolved(history[-1].receipt_id)
+        # mark_unresolved appends a NEW snapshot — replace the history entry so
+        # downstream evidence builders see the flag (the returned receipts are
+        # what the judge reads, not just the ledger)
+        history[-1] = ledger.mark_unresolved(history[-1].receipt_id)
     return history

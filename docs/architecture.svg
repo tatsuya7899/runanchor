@@ -50,8 +50,8 @@
   <text x="820" y="204" text-anchor="middle" class="title">verify</text>
   <text x="820" y="224" text-anchor="middle" class="small">replay: fork start image, rerun</text>
   <text x="820" y="242" text-anchor="middle" class="small">compare exit + fingerprints</text>
-  <text x="820" y="262" text-anchor="middle" class="small">oracle: fork result image, run</text>
-  <text x="820" y="280" text-anchor="middle" class="small">hidden tests agent never saw</text>
+  <text x="820" y="262" text-anchor="middle" class="small">oracle: fork result image — hidden</text>
+  <text x="820" y="280" text-anchor="middle" class="small">tests, isolated runner (no /work)</text>
 
   <!-- gate -->
   <rect x="710" y="340" width="220" height="80" class="box" rx="8"/>

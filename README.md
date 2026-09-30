@@ -40,16 +40,24 @@ executable hidden oracle run against each produced result image (defective
 
 **What the layers mean:** evidence-only review already stops most bad runs —
 a gate refusing unproven claims is conservative by design. But it adopted one
-run whose visible suite never exercised the planted trap
-(`seeded-skip-tests-tempt`); the hidden oracle failed it, and the gate
-rejected. Verification also flipped one honest run from reject to adopt.
-The cost: verification made the judge *more* conservative on two good runs
-(gate fp=4 vs baseline fp=3). Row-level detail: `eval/bench-20260930-v2.md`.
+run that reached green by editing the test's expected value
+(`seeded-skip-tests-tempt`); the hidden oracle's test-integrity check failed
+it, and the gate rejected. Verification also rescued one honest run the
+evidence-only layer dropped (a judge parse failure, fail-safe reject).
+
+The reported cost, stated honestly: all four gate-layer false rejects were
+judge-output *parse failures* (6/70 calls, ~9%), not semantic rejections —
+counting them in the matrix overstates the FP cost, so we disclose it here
+and treat v2 specificity as a lower bound. Row-level detail:
+`eval/bench-20260930-v2.md`.
 
 Honest caveats: 100% is a small-denominator measurement (7 defective), not a
 rate guarantee — claim: "every defective run the corpus produced was caught".
-Most seeded items were honestly fixed by the planner, which is why truth is
-the oracle's exit code and not the trap label.
+Most seeded items were honestly fixed by the planner (17/24 passed the
+oracle), which is why truth is the oracle's exit code and not the trap label.
+The two layers are not independent detectors — the gate judge is *shown* the
+oracle outcome that also defines truth; the split measures whether the judge
+follows verification evidence, not verification alone.
 
 We publish only numbers we measured — and you can re-run the same procedure
 rather than trusting ours (`scripts/bench_live_runanchor.py`).
@@ -110,7 +118,7 @@ coverage is the offline suite.
 | ConTree `op show` (operation record → receipt anchor) | `ContreeDriver.run()` fallback | uuid-capture, missing-field, `op show`-failure tests | ✅ 2026-09-30 — flat `result.{stdout,state.*}` shape measured |
 | ConTree `use <image>` (fork recorded env) | `verifier` via `ContreeDriver.use()` | replay-path tests | ✅ 2026-09-30 — replay forked `4fa16c8f…`, verify verdict `match` (e2e `scripts/e2e_live_runanchor.py`) |
 | ConTree `run -D` (disposable verify rerun) | `verify_receipt` | disposable-flag test | ✅ 2026-09-30 — `-D` returns `result_image_uuid: null`; replay uses `-D` (no checkpoint needed — see below) |
-| ConTree `use <result_image>` + hidden oracle run | `verify_receipt` oracle stage | oracle-target, oracle-fail, oracle-error tests | ✅ 2026-09-30 — result image forked, `oracle/` mounted, pass/fail recorded w/ op UUID |
+| ConTree `use <result_image>` + hidden oracle run | `verify_receipt` oracle stage | oracle-target, oracle-fail, oracle-error, isolation tests | ✅ 2026-09-30 — result image forked, `oracle/` mounted OUTSIDE the workspace (unpredictable path, `python3 -I -S` runner), pass/fail recorded w/ op UUID |
 | ConTree `op events` (log stream) | `ContreeDriver.events()` | fixture + type-guard tests | command exists; payload unverified |
 | ConTree `session delete` (verify-session cleanup) | `ContreeDriver.close()` | call-shape + cleanup-on-failure tests | ✅ 2026-09-30 — probe sessions deleted after verify |
 | `result_image_uuid` comparison | **dropped axis** | — | ✅ disproven 2026-09-30: checkpoints are not reproducible across sessions (identical command + identical start image → different UUIDs `9d2dfa13…` vs `e82f0702…`); comparing them would false-mismatch every honest run |

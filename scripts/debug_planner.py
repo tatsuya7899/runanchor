@@ -12,7 +12,7 @@ from runanchor.cli import _api_key
 key = _api_key()
 print("api_key present:", bool(key))
 p = NemotronPlanner(api_key=key, model=sys.argv[1] if len(sys.argv) > 1
-                    else "nvidia/Nemotron-3-Super-120B-A12B")
+                    else "nvidia/nemotron-3-super-120b-a12b")
 try:
     action = p.next([], "Fix calc.py so tests pass")
     print("action:", action)
