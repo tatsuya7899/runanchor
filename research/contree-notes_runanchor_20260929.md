@@ -169,3 +169,20 @@ contree -S verify_<receipt_id> op show HEAD         # exit_code/stdoutを比較
 ### §4チェックリストの訂正
 
 §4の「同一コマンド再実行で同一result_image_uuid → 比較軸として生きる」は**同一セッション内に限る**と訂正。§4のverify専用セッション非disposable案はe2eで却下、`-D`復帰が確定。実装は`verifier.py`・`contree_driver.py`のdocstringに反映済み。
+
+## §8 追補(2026-09-30) — `--file`マウントの実セマンティクス + ハーネス修正
+
+ベンチのスモークで実測:
+
+| 実験 | 結果 |
+|---|---|
+| run1で`--file host:/work/x`をマウント→run2で書換→run3で読む(再マウントなし) | **書換が永続** — マウントしたファイルはfsに実体化し、後続run・checkpointに残る |
+| **同一`--file`を毎run指定し続ける** | **各runでホスト内容が再適用され、agentの編集が巻き戻る**(スモークで実害発生: plannerがheredocでcalc.pyを修正→次runでseed内容に戻りpytest失敗) |
+| `pip install`(非使い捨てrun) | 動作・checkpointに永続(egress可)。benchは`eval/runanchor-bench-image/Dockerfile`で`contree build`した`runanchor-bench` imageを使用(python:3.12-slim+pytest) |
+| Nemotron Lightning as planner | 実務的に弱い — `cat`ループに陥り編集まで到達しない。planner=**nemotron-3-super-120b-a12b**・judge=Lightningの分離で解消 |
+
+### ハーネスの根本欠陥として修正(第4ラウンド相当)
+
+1. **`run_loop`の「exit 0で系列終了」を廃止** — `ls`のような偵察コマンドの成功で「タスク完了」扱いになり、エージェントが何もせず系列終了していた。系列終了はplannerのdoneのみ
+2. **seedマウントは系列の最初のrunのみ** — 毎runマウントすると再適用で編集が巻き戻る(上記実測)
+3. benchはアイテムごとにthrowawayセッションを`close()`で掃除(ベータ50ops上限の汚染防止)

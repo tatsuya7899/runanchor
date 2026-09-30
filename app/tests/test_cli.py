@@ -87,6 +87,9 @@ def test_verify_demo_receipt(tmp_path, capsys):
 
 def test_run_without_credentials_fails_cleanly(tmp_path, capsys, monkeypatch):
     monkeypatch.delenv("NEBIUS_API_KEY", raising=False)
+    # isolate HOME so the contree auth.ini fallback can't find credentials —
+    # the test must not depend on whether this machine has `contree auth` done
+    monkeypatch.setenv("HOME", str(tmp_path))
     rc = main(["--ledger", str(tmp_path / "l.jsonl"), "run", "fix the bug"])
     assert rc != 0
     assert "NEBIUS_API_KEY" in capsys.readouterr().out

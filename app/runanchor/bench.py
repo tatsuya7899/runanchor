@@ -117,11 +117,18 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
     for item in items:
         # mount the seed workspace on every run — without it the agent has
         # nothing to fix; task text (never the slug) is what the planner sees,
-        # so labels can't leak into evidence
-        seed_files = [str(p) for p in sorted(item.seed_dir.rglob("*")) if p.is_file()]
+        # so labels can't leak into evidence. ConTree --file takes
+        # host_path:instance_path — seeds land under /work preserving their
+        # relative layout.
+        seed_files = [
+            f"{p.resolve()}:/work/{p.relative_to(item.seed_dir)}"
+            for p in sorted(item.seed_dir.rglob("*")) if p.is_file()
+        ]
+        driver = None
         try:
+            driver = driver_for(item)
             series = run_loop(
-                driver_for(item), ledger, planner_for(item),
+                driver, ledger, planner_for(item),
                 task=item.task, max_iter=max_iter, files=seed_files,
             )
         except Exception as e:  # noqa: BLE001 — one bad item must not kill the bench
@@ -129,6 +136,14 @@ def run_bench(corpus_dir, ledger: Ledger, *, driver_for, planner_for, judge,
                          "predicted": "error", "correct": False,
                          "verdict_reason": f"harness error: {e}"})
             continue
+        finally:
+            # each item gets a throwaway session — release it whether the
+            # series ran or not (images themselves are global, not per-session)
+            if driver is not None:
+                try:
+                    driver.close()
+                except Exception:
+                    pass
         if not series:
             rows.append({"slug": item.slug, "label": item.label,
                          "predicted": "no-run", "correct": False})

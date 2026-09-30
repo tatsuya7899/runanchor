@@ -47,8 +47,24 @@ def _cmd_demo(args) -> int:
     return 0
 
 
+def _api_key() -> str | None:
+    """NEBIUS_API_KEY env first; fall back to the `contree auth` profile
+    token (~/.config/contree/auth.ini) — one credential covers both the
+    sandbox CLI and the Token Factory inference API."""
+    key = os.environ.get("NEBIUS_API_KEY")
+    if key:
+        return key
+    try:
+        import configparser
+        ini = configparser.ConfigParser()
+        ini.read(Path.home() / ".config" / "contree" / "auth.ini")
+        return ini["profile:default"]["token"]
+    except Exception:
+        return None
+
+
 def _cmd_run(args) -> int:
-    api_key = os.environ.get("NEBIUS_API_KEY")
+    api_key = _api_key()
     if not api_key:
         print("error: NEBIUS_API_KEY not set — live runs need Token Factory credentials.")
         print("       for an offline walkthrough: runanchor demo")
@@ -143,7 +159,7 @@ def _cmd_verify(args) -> int:
     if args.driver == "demo":
         driver = DemoDriver.from_dir(FIXTURE_DIR / "verify")
     else:
-        if not os.environ.get("NEBIUS_API_KEY"):
+        if not _api_key():
             print("error: NEBIUS_API_KEY not set — live verify needs credentials.")
             print("       hint: --driver demo replays the recorded fixture")
             return 2
@@ -175,7 +191,7 @@ def _cmd_verify(args) -> int:
 
 
 def _cmd_bench(args) -> int:
-    api_key = os.environ.get("NEBIUS_API_KEY")
+    api_key = _api_key()
     if not api_key:
         print("error: NEBIUS_API_KEY not set — bench is live measurement (sandbox + judge calls).")
         print("       for an offline walkthrough: runanchor demo")

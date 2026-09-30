@@ -22,10 +22,14 @@ DEFAULT_MODEL = "nvidia/Nemotron-3_5-Lightning"
 DEFAULT_BASE_URL = "https://api.tokenfactory.nebius.com/v1/chat/completions"
 
 PLANNER_SYSTEM = (
-    "You are a coding agent driving a sandboxed workspace. Reply with exactly one "
-    'JSON object: {"command": "<shell command to run next>"} to act, or '
-    '{"done": true} when the task is complete. Add "shell_mode": true if the '
-    "command uses pipes, redirects or env vars. No other text."
+    "You are a coding agent driving a sandboxed workspace at /work. Reply with "
+    'exactly one JSON object: {"command": "<shell command to run next>"} to '
+    'act, or {"done": true} when the task is complete. Add "shell_mode": true '
+    "if the command uses pipes, redirects or env vars. Work in small steps: "
+    "inspect the files, edit them (e.g. via python3 -c, sed, or a heredoc with "
+    "shell_mode), then run the project's test command. Only answer done AFTER "
+    "you have run the tests and they pass — declaring done without green test "
+    "evidence in the history is a rejected claim. No other text."
 )
 
 
@@ -144,10 +148,16 @@ def run_loop(
             # planner emitted an empty command — end the series cleanly
             break
         try:
+            # Seed files mount on the FIRST run only — ConTree applies --file
+            # mounts per-invocation, so re-mounting on every run would
+            # overwrite the agent's edits with the original host content
+            # (live-measured 2026-09-30: a written calc.py reverted on the
+            # next run because the seed remounted over it).
             op = driver.run(
                 action["command"],
                 cwd=action.get("cwd", "/work"),
-                files=base_files + list(action.get("files") or []),
+                files=(base_files if not history else [])
+                      + list(action.get("files") or []),
                 shell_mode=action.get("shell_mode", False),
             )
         except Exception:
@@ -164,8 +174,9 @@ def run_loop(
         )
         ledger.append_receipt(receipt)
         history.append(receipt)
-        if op.exit_code == 0:
-            return history
-    if history:
+    # exit_code==0 alone must NOT end the series — a reconnaissance command
+    # (`ls`, `cat`) exits 0 without demonstrating anything. Only the planner's
+    # `done`, a planner/driver failure, an empty command, or max_iter ends it.
+    if history and history[-1].exit_code != 0:
         ledger.mark_unresolved(history[-1].receipt_id)
     return history

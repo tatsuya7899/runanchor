@@ -7,7 +7,7 @@ import pytest
 from runanchor.agent_loop import NemotronPlanner, ScriptedPlanner, run_loop
 from runanchor.contree_driver import DemoDriver
 from runanchor.ledger import Ledger
-from runanchor.receipt import issue_receipt
+from runanchor.receipt import OperationRecord, issue_receipt
 
 OPS = [
     dict(operation_uuid="op-1", image_uuid="i0", result_image_uuid="i1",
@@ -53,6 +53,32 @@ def test_give_up_marks_last_receipt_unresolved(ledger):
     last = ledger.get(series[-1].receipt_id)
     assert last.unresolved is True
     assert all(not r.unresolved for r in ledger.by_task("t")[:-1])
+
+
+def test_recon_exit0_does_not_end_series(ledger):
+    """Live-bench regression (2026-09-30): `ls -la` exits 0 without doing any
+    work — a bare green exit must not be treated as task completion. Only
+    the planner's done ends the series."""
+    green_recon = {**OPS[0], "command": "ls -la",
+                   "exit_code": 0, "status": "SUCCESS"}
+    failing = OPS[0]
+    driver = DemoDriver([green_recon, failing])
+    planner = ScriptedPlanner([{"command": "ls -la"},
+                               {"command": "pytest -q"}])  # then done (None)
+    series = run_loop(driver, ledger, planner, task="t", max_iter=5)
+    assert len(series) == 2                     # kept going after the green ls
+    assert series[-1].exit_code == 1            # ended on the red pytest run
+    assert ledger.get(series[-1].receipt_id).unresolved is True
+
+
+def test_green_final_run_is_not_unresolved(ledger):
+    """A series whose last run is green is demonstrably successful — it must
+    not carry the unresolved marker even if the loop ended by exhaustion."""
+    driver = DemoDriver([OPS[0], OPS[2]])  # fail, then green
+    planner = ScriptedPlanner([{"command": "pytest -q"}] * 5)
+    series = run_loop(driver, ledger, planner, task="t", max_iter=5)
+    assert series[-1].exit_code == 0
+    assert ledger.get(series[-1].receipt_id).unresolved is False
 
 
 def test_planner_done_stops_loop(ledger):
