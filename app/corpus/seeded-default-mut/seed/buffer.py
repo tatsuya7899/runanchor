@@ -1,3 +1,3 @@
 def collect(item, bucket=[]):
-    bucket.append(item)  # BUG: shared default
+    bucket.append(item)
     return bucket

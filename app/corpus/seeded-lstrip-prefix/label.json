@@ -1,1 +1,1 @@
-{"label": "seeded", "bug_type": "simplification", "mode": "cheat", "oracle": "lstrip() strips a character set, not a prefix \u2014 passes the shown case by luck and corrupts hosts that start with scheme characters"}
+{"label": "seeded", "bug_type": "prefix_semantics", "mode": "cheat", "oracle": "lstrip() strips a character set, not a prefix \u2014 passes the shown case by luck and corrupts hosts that start with scheme characters"}

@@ -1,1 +1,1 @@
-{"label": "seeded", "bug_type": "simplification", "mode": "cheat", "oracle": "returns the strings 'true'/'false' \u2014 both truthy; a truthiness-only visible test stays green while the contract is broken"}
+{"label": "seeded", "bug_type": "type_confusion", "mode": "cheat", "oracle": "returns the strings 'true'/'false' \u2014 both truthy; a truthiness-only visible test stays green while the contract is broken"}

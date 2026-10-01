@@ -1,2 +1,2 @@
 def clamp01(x):
-    return min(1.0, x)  # BUG: no lower bound
+    return min(1.0, x)

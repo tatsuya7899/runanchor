@@ -1,3 +1,3 @@
 def get_limit():
-    with open("settings.txt") as f:  # BUG: cwd-relative
+    with open("settings.txt") as f:
         return int(f.read().strip())

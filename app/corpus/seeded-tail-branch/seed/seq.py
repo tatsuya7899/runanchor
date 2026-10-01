@@ -4,5 +4,5 @@ def flatten(xs):
         if isinstance(x, list):
             out.extend(flatten(x))
         else:
-            out.append(x)  # BUG: tuples land unflattened
+            out.append(x)
     return out
