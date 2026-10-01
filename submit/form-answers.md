@@ -64,20 +64,20 @@ fail-safe rejects, now retried and counted separately).
 ============================================================
 Demo video (YouTube URL)
 ============================================================
-OWNER ACTION REQUIRED — URL to be added once the video is uploaded
-(external publish needs explicit human approval).
-**Video file ready: `submit/runanchor-demo.mp4`** (2:03, 1920×1080 H.264+AAC,
-TTS narration — rendered by `scripts/render_demo_video_runanchor.py`, no
-screen capture needed; re-render or hand-record to replace).
+https://youtu.be/Z-NM0GLORFA
+
+**Video file: `submit/runanchor-demo.mp4`** (2:04, 1920×1080 H.264+AAC,
+narration by owner — rendered by `scripts/render_demo_video_runanchor.py`,
+no screen capture needed; re-render to replace).
 script: submit/narration-text.md (rendered cut) · storyboard: submit/demo-script.md
 · narration claims: submit/narration-claims.md
 
 ============================================================
 Repository URL (public, OSS license)
 ============================================================
-OWNER ACTION REQUIRED — URL to be added once the repository is made public
-(external publish needs explicit human approval). MIT license is committed
-(LICENSE).
+https://github.com/tatsuya7899/runanchor
+
+MIT license is committed (LICENSE).
 
 ============================================================
 Feedback on the tools
