@@ -338,15 +338,30 @@ SCENES = {1: scene1, 2: scene2, 3: scene3, 4: scene4, 5: scene5, 6: scene6, 7: s
 
 # ---------- audio ----------
 
+def audio_seconds(p: Path) -> float:
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                        "-of", "csv=p=0", str(p)], capture_output=True, text=True, check=True)
+    return float(r.stdout.strip())
+
+
 def tts(text: str, out: Path) -> float:
     aiff = out.with_suffix(".aiff")
     subprocess.run(["say", "-v", "Samantha", "-r", "178", "-o", str(aiff), text],
                    check=True)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(aiff),
                     "-ar", "44100", "-ac", "2", str(out)], check=True)
-    p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                        "-of", "csv=p=0", str(out)], capture_output=True, text=True, check=True)
-    return float(p.stdout.strip())
+    return audio_seconds(out)
+
+
+def external_audio(audio_dir: Path, n: int, out: Path) -> float | None:
+    """Use narration-{n}.{wav,mp3,m4a,aiff} from audio_dir if present."""
+    for ext in ("wav", "mp3", "m4a", "aiff"):
+        src = audio_dir / f"narration-{n}.{ext}"
+        if src.exists():
+            subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src),
+                            "-ar", "44100", "-ac", "2", str(out)], check=True)
+            return audio_seconds(out)
+    return None
 
 
 def pad_audio(src: Path, dur: float, out: Path) -> None:
@@ -359,20 +374,28 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--workdir", default="/tmp/ra-video")
     ap.add_argument("--out", default=str(ROOT / "submit" / "runanchor-demo.mp4"))
+    ap.add_argument("--audio-dir", default=None,
+                    help="dir with narration-{1..7}.{wav,mp3,m4a,aiff}; missing scenes fall back to TTS")
     args = ap.parse_args()
     work = Path(args.workdir)
     frames_dir = work / "frames"
     frames_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. TTS per scene → measure → scene durations
+    # 1. narration per scene → measure → scene durations
+    audio_dir = Path(args.audio_dir) if args.audio_dir else None
     scene_dur = {}
     tts_paths = {}
     for n, text in NARR.items():
         wav = work / f"tts-{n}.wav"
-        d = tts(text, wav)
+        d = external_audio(audio_dir, n, wav) if audio_dir else None
+        if d is not None:
+            src = "ext"
+        else:
+            d = tts(text, wav)
+            src = "tts"
         scene_dur[n] = max(MIN_DUR[n], d + 1.2)
         tts_paths[n] = wav
-        print(f"scene {n}: tts {d:.1f}s → scene {scene_dur[n]:.1f}s")
+        print(f"scene {n}: {src} {d:.1f}s → scene {scene_dur[n]:.1f}s")
 
     # 2. render frames
     concat_lines = []
