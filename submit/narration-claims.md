@@ -9,7 +9,7 @@
 | 3 | "Not a self-report. A verifiable record" | 能力 | receiptのフィールド実演 | verified |
 | 4 | "A false claim can't survive re-execution" | 能力 | `runanchor verify`のreplay実演(start image fork→再実行→fingerprint比較) | verified |
 | 4b | "And a green-but-wrong answer can't survive tests it never saw" | 能力 | oracle実演(result image fork→隠しテストをworkspace外の独特pathにマウント・`python3 -I -S`隔離runnerで実行) | verified |
-| 5 | "We measured the gate itself — evidence review alone vs the full gate" | 定量 | `eval/bench-20260930-v3.md`の2層行列(evidence-only / gate) | verified |
+| 5 | "We measured the gate itself — evidence review alone vs the full gate" | 定量 | `eval/bench-20261001-v4.md`の2層行列(evidence-only / gate、n=54) | verified |
 | 6 | "Open source. Reproduce it yourself" | 能力 | READMEのReproduce節・`runanchor demo`・`scripts/bench_live_runanchor.py` | verified |
 | 7 | "The ledger keeps the failures too" | 能力 | `runanchor check`のhash chain検証・rejected/unresolved行の実演 | verified |
 

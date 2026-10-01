@@ -10,7 +10,7 @@ Deps (NOT package deps — submission tooling only):
 Inputs are real artifacts: terminal text is reconstructed from real captured
 `runanchor demo/list/show` output on a fixture ledger — field names and order
 preserved, long hashes elided with "…" and some fields omitted for screen
-space (the "== DEMO receipt" banner is verbatim). Measured numbers are the v3
+space (the "== DEMO receipt" banner is verbatim). Measured numbers are the v4
 bench values also printed in README/form-answers. Narration lines must stay
 inside submit/narration-claims.md (claims SSOT) — each is tagged below.
 
@@ -142,10 +142,10 @@ NARR = {
        "mounted outside its workspace under an isolated interpreter — so "
        "green but wrong cannot survive either.",                              # claim 4+4b
     5: "We measured the gate itself, on live Nebius sandboxes. Reading "
-       "evidence alone, the judge caught three of five defective runs. With "
-       "replay and the hidden oracle — all five, while passing twenty nine of "
-       "thirty good runs. The corpus, the judge prompt, and the ledger are in "
-       "the repo: check our numbers, not our claims.",                        # claim 5+6
+       "evidence alone, the judge caught seven of eleven defective runs. With "
+       "replay and the hidden oracle — all eleven, while passing forty two of "
+       "forty three good runs. The corpus, the judge prompt, and the ledger "
+       "are in the repo: check our numbers, not our claims.",                 # claim 5+6
     6: "Under the hood: ConTree sandbox operations anchor every receipt. "
        "Nemotron plans the agent loop; Nemotron judges the evidence. "
        "Everything lands on an append only, hash chained ledger — even the "
@@ -259,14 +259,14 @@ def scene5() -> list[tuple[Image.Image, float]]:
     def draw(full: bool) -> Image.Image:
         img, d = new_frame()
         center_text(d, 90, "measured, not asserted", font(48), TEXT)
-        center_text(d, 160, "35-run labeled corpus · live Nebius Sandboxes · 2026-09-30",
+        center_text(d, 160, "54-run labeled corpus · live Nebius Sandboxes · 2026-10-01",
                     font(26), DIM)
         y = 270
         bx = (TERM_X, y, TERM_X + 700, y + 380)
         d.rounded_rectangle(bx, radius=18, fill=PANEL, outline=BORDER, width=2)
         d.text((bx[0] + 34, y + 30), "evidence review alone", font=font(32), fill=DIM)
-        d.text((bx[0] + 34, y + 110), "60%", font=font(120), fill=ORANGE)
-        d.text((bx[0] + 34, y + 260), "sensitivity 3/5 — two defective runs",
+        d.text((bx[0] + 34, y + 110), "64%", font=font(120), fill=ORANGE)
+        d.text((bx[0] + 34, y + 260), "sensitivity 7/11 — four defective runs",
                font=font(26, mono=True), fill=DIM)
         d.text((bx[0] + 34, y + 300), "looked green and slipped through",
                font=font(26, mono=True), fill=DIM)
@@ -276,13 +276,13 @@ def scene5() -> list[tuple[Image.Image, float]]:
             d.text((bx2[0] + 34, y + 30), "full gate: evidence + replay + oracle",
                    font=font(32), fill=GREEN)
             d.text((bx2[0] + 34, y + 110), "100%", font=font(120), fill=GREEN)
-            d.text((bx2[0] + 34, y + 260), "sensitivity 5/5 · specificity 97% (29/30)",
+            d.text((bx2[0] + 34, y + 260), "sensitivity 11/11 · specificity 98% (42/43)",
                    font=font(26, mono=True), fill=TEXT)
-            d.text((bx2[0] + 34, y + 300), "the one miss: contract impossible by design",
+            d.text((bx2[0] + 34, y + 300), "the one miss: fixed code, run never green",
                    font=font(26, mono=True), fill=DIM)
-            center_text(d, 700, "$ runanchor check --ledger eval/bench-ledger-20260930-v3.jsonl",
+            center_text(d, 700, "$ runanchor check --ledger eval/bench-ledger-20261001-v4.jsonl",
                         font(24, mono=True), DIM)
-            center_text(d, 742, "ok: 291 snapshots / 219 receipts, hash chain intact",
+            center_text(d, 742, "ok: 455 snapshots, hash chain intact",
                         font(26, mono=True), CYAN)
             center_text(d, 800, "small sample — corpus, judge prompt and commands are in the repo",
                         font(24), DIM)

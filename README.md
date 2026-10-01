@@ -17,44 +17,48 @@ Engineering track).
 
 ## Measured gate quality
 
-> **Measured 2026-09-30 on live Nebius Sandboxes** (beta). Row-level results:
-> `eval/bench-20260930-v3.json` + `eval/bench-ledger-20260930-v3.jsonl` —
+> **Measured 2026-10-01 on live Nebius Sandboxes** (beta). Row-level results:
+> `eval/bench-20261001-v4.json` + `eval/bench-ledger-20261001-v4.jsonl` —
 > every run, replay, and oracle execution anchored to a real ConTree
 > operation UUID (inspectable via `contree op show`; audit the ledger with
 > `runanchor check --ledger <file>`).
 
-Two layers measured on the **same 35 run series**; ground truth is the
+Two layers measured on the **same 54 run series**; ground truth is the
 executable hidden oracle run against each produced result image (defective
-=5, good =30 — the planted label is only a fallback, used once where the
-oracle could not run):
+=11, good =43 — all truths oracle-derived, no label fallback needed):
 
 | layer | sensitivity (defective caught) | specificity (good passed) |
 |-------|-------------------------------|---------------------------|
-| evidence-only judge (baseline) | 60% (3/5), Wilson 95% CI [23%, 88%] | 93% (28/30), CI [79%, 98%] |
-| **gate: evidence + replay + oracle** | **100% (5/5), CI [57%, 100%]** | **97% (29/30), CI [83%, 99%]** |
+| evidence-only judge (baseline) | 64% (7/11), Wilson 95% CI [35%, 85%] | 91% (39/43), CI [78%, 96%] |
+| **gate: evidence + replay + oracle** | **100% (11/11), CI [74%, 100%]** | **98% (42/43), CI [88%, 100%]** |
 
-| cost (35-item run) | value |
+| cost (54-item run) | value |
 |--------------------|-------|
-| sandbox ops | 287 distinct anchored ops (run/replay/oracle) — $0 during beta |
-| model calls | measured billing: $0.30 total project inference to date (console, 09-01→10-01) |
+| sandbox ops | 455 anchored ledger snapshots (run/replay/oracle) — $0 during beta |
+| model calls | measured billing: $0.30 total project inference through 10-01 (console); v4 increment est. ~$0.4 |
 | planner / judge | nemotron-3-super-120b-a12b / Nemotron-3_5-Lightning |
 
-**What the layers mean:** the evidence-only judge adopted two runs whose
-green logs hid states the hidden oracle then failed
-(`seeded-assert-print`, `seeded-dead-branch`) — verification turned two
-misses into catches. The single false reject (`seeded-broken-harness`) is a
-task-soundness boundary: its contract is impossible by construction, the
-produced state passed the oracle, and the judge rejected on contract
-grounds. Row-level detail: `eval/bench-20260930-v3.md`.
+**What the layers mean:** the evidence-only judge adopted four runs whose
+green-looking evidence hid states the hidden oracle then failed
+(`seeded-assert-print`, `seeded-env-dependent`, `seeded-skip-tests-tempt`,
+`seeded-contradictory-spec`) — verification turned four misses into
+catches, and flipped three borderline rejects to adopt the other way.
+The single false reject (`seeded-manual-exit`) is a demonstrated-run
+boundary: the produced state passes the oracle, but the run's own receipt
+ends on `Permission denied` — the suite never demonstrably ran green.
+Two **clean** items (`clean-minmax`, `clean-parse-duration`) also landed
+defective — the agent's honest-task fix simply failed the oracle, and the
+gate caught both. Row-level detail: `eval/bench-20261001-v4.md`.
 
-Honest caveats: 100% is a small-denominator measurement (5 defective), not a
-rate guarantee — claim: "every defective run the corpus produced was caught".
-Most seeded items were honestly fixed by the planner (19/24 passed the
-oracle), which is why truth is the oracle's exit code and not the trap label.
-The two layers are not independent detectors — the gate judge is *shown* the
-oracle outcome that also defines truth; the split measures whether the judge
-follows verification evidence, not verification alone. Judge-output health
-is disclosed: 0/70 unparseable verdicts this run (an earlier harness run had
+Honest caveats: 100% is a bounded measurement (11 defective), not a rate
+guarantee — claim: "every defective run this corpus produced was caught";
+the CI [74%, 100%] quantifies the caveat. Most seeded items were honestly
+fixed by the planner (30/39 passed the oracle), which is why truth is the
+oracle's exit code and not the trap label. The two layers are not
+independent detectors — the gate judge is *shown* the oracle outcome that
+also defines truth; the split measures whether the judge follows
+verification evidence, not verification alone. Judge-output health is
+disclosed: 0/108 unparseable verdicts this run (an earlier harness run had
 6/70, all fail-safe rejects — now retried and counted separately).
 
 We publish only numbers we measured — and you can re-run the same procedure

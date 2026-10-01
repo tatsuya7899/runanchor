@@ -51,9 +51,9 @@ so green-but-wrong cannot survive either.
 
 ```
 We measured the gate itself, on live Nebius sandboxes. Reading
-evidence alone, the judge caught three of five defective runs.
-With replay and the hidden oracle — all five, while passing
-twenty-nine of thirty good runs. The corpus, the judge prompt,
+evidence alone, the judge caught seven of eleven defective runs.
+With replay and the hidden oracle — all eleven, while passing
+forty-two of forty-three good runs. The corpus, the judge prompt,
 and the ledger are in the repo: check our numbers, not our claims.
 ```
 (claims表 #5 + #6)

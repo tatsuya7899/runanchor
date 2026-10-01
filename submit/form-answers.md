@@ -34,30 +34,32 @@ judge). Python, MIT license.
 ============================================================
 Measured results (if the form has a results/metrics field)
 ============================================================
-Gate (evidence + replay + hidden oracle): sensitivity **100% (5/5)**,
-specificity **97% (29/30)** — Wilson 95% CIs [57%, 100%] and [83%, 99%]
+Gate (evidence + replay + hidden oracle): sensitivity **100% (11/11)**,
+specificity **98% (42/43)** — Wilson 95% CIs [74%, 100%] and [88%, 100%]
 respectively.
-Evidence-only judge baseline on the same 35 run series: 60% (3/5) / 93%
-(28/30) — verification turned two green-looking misses into catches; the
-single false reject is a task-soundness boundary (the contract was
-impossible by construction).
+Evidence-only judge baseline on the same 54 run series: 64% (7/11) / 91%
+(39/43) — verification turned four green-looking misses into catches and
+flipped three borderline rejects to adopt. The single false reject is a
+demonstrated-run boundary: the produced state passed the oracle, but the
+run's own receipt ended on `Permission denied` — the suite never
+demonstrably ran green.
 Ground truth is executable: a hidden test suite the agent never saw runs
-against the produced result image (defective=5, good=30 — the planted label
-is only a fallback, used once). The oracle mounts outside the workspace at
-an unpredictable path under an isolated `python3 -I -S` runner, so the
-agent's own files cannot shadow or poison the check.
-Cost: 287 distinct anchored sandbox operations (219 run + 34 replay + 34
-oracle) across 291 ledger snapshots — $0 during the ConTree beta; ≤8
-planner iterations per item + 70 judge calls — measured billing: **$0.30
-total project inference to date** (Token Factory console, 09-01→10-01;
-breakdown in eval/bench-20260930-v3.md). Measured 2026-09-30 on live Nebius
-Sandboxes; every run, replay and oracle execution is anchored to a ConTree
-operation UUID in eval/bench-ledger-20260930-v3.jsonl (hash-chain check:
-`runanchor check`).
-Caveats stated plainly: 5/5 is "every defective run the corpus produced",
-not a rate guarantee at scale; judge-output health is disclosed — 0/70
-unparseable verdicts (an earlier harness run had 6/70 fail-safe rejects,
-now retried and counted separately).
+against the produced result image (defective=11, good=43 — all truths
+oracle-derived, no label fallback this run; two of the defective rows are
+clean items whose honest fixes simply failed the oracle). The oracle mounts
+outside the workspace at an unpredictable path under an isolated
+`python3 -I -S` runner, so the agent's own files cannot shadow or poison
+the check.
+Cost: 455 anchored ledger snapshots — $0 during the ConTree beta; measured
+billing: **$0.30 total project inference through 10-01** (Token Factory
+console; v4 increment est. ~$0.4; breakdown in eval/bench-20261001-v4.md).
+Measured 2026-10-01 on live Nebius Sandboxes; every run, replay and oracle
+execution is anchored to a ConTree operation UUID in
+eval/bench-ledger-20261001-v4.jsonl (hash-chain check: `runanchor check`).
+Caveats stated plainly: 11/11 is "every defective run this corpus
+produced", not a rate guarantee at scale; judge-output health is
+disclosed — 0/108 unparseable verdicts (an earlier harness run had 6/70
+fail-safe rejects, now retried and counted separately).
 
 ============================================================
 Demo video (YouTube URL)
