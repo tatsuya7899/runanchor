@@ -1,4 +1,4 @@
-# secrets — repo内に環境変数を置かない
+# secrets — no env vars inside the repo
 .env
 .env.*
 *.pem
@@ -25,8 +25,8 @@ build/
 coverage/
 *.log
 
-# runanchor runtime artifacts (台帳はローカル生成物)
+# runanchor runtime artifacts (ledger is a local artifact)
 state/
 
-# generated reports (作業用生成物 — 提出物として置く場合は個別に判断)
+# generated reports (working artifacts — committed only by explicit decision)
 readiness-report.json

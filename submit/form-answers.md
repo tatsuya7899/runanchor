@@ -1,9 +1,8 @@
-# 提出フォーム転記 — runanchor(Nebius × NVIDIA Global AI Hackathon)
+# Devpost form answers — runanchor (Nebius × NVIDIA Global AI Hackathon)
 
-※フォーム各欄への転記用。見出しは欄名、本文をそのまま貼る。提出物は英語。
-Devpost側の欄構成はフォーム画面で確認して合わせること。`OWNER ACTION
-REQUIRED` は公開操作(動画投稿・repo公開)後にURLへ置き換えること
-(置き忘れは提出不可 — ready.pyで検査)。
+Copy-paste source for the submission form: each section header is a form
+field; paste the body as-is. Check the actual Devpost form layout when
+submitting. `ready.py` verifies the submission URLs are filled.
 
 ============================================================
 Project name
