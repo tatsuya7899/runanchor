@@ -10,11 +10,11 @@ Project name
 runanchor — receipts your coding agent can't fake
 
 ============================================================
-Tagline / elevator pitch
+Tagline / elevator pitch (max 200 chars — this one is 169)
 ============================================================
-CI distrusts artifacts. Nothing distrusts an agent's report — until now.
-Every agent run gets a receipt anchored to the provider's own execution
-record, replay-verified before a human or measured judge approves it.
+Agents say "tests pass." Who checks? runanchor anchors every coding-agent
+run to provider-issued execution records — replay-verified, oracle-tested,
+adopted on evidence.
 
 ============================================================
 Description / About this project
