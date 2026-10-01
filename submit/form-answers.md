@@ -17,18 +17,37 @@ run to provider-issued execution records — replay-verified, oracle-tested,
 adopted on evidence.
 
 ============================================================
-Description / About this project
+Project Story — About the project (Markdown field)
 ============================================================
-(paste submit/description.md — sections "What it is" / "Why it matters" /
-"What it does NOT do" / "Stack" / "Try it")
+(paste the whole of submit/project-story.md — Inspiration / What it does /
+How we built it / The measurement / Challenges / What we learned /
+What's next / Try it)
 
 ============================================================
-Built with / tech stack
+Built with / tech stack (tags — up to 25)
 ============================================================
+python · nebius · nebius-token-factory · nebius-sandboxes · contree ·
+nvidia · nemotron · ai-agents · code-verification · developer-tools
+
+(Long prose version, if a free-text field instead of tags:)
 Nebius Token Factory (ConTree Sandboxes — isolated runs + provider-issued
 operation/image records; inference API — nvidia/nemotron-3-super-120b-a12b
 drives the agent planner, nvidia/Nemotron-3_5-Lightning is the measurement
 judge). Python, MIT license.
+
+============================================================
+"Try it out" links
+============================================================
+https://github.com/tatsuya7899/runanchor  (repo — offline demo inside:
+`runanchor demo` runs with no credentials)
+
+============================================================
+Project media — image gallery (up to 15)
+============================================================
+- submit/runanchor-thumbnail.png        (title card, 3:2)
+- submit/gallery-scoreboard.png         (measured result, video frame)
+- submit/gallery-receipt.png            (receipt fields, video frame)
+- submit/gallery-architecture.png       (under-the-hood, video frame)
 
 ============================================================
 Measured results (if the form has a results/metrics field)
