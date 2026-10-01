@@ -5,7 +5,7 @@
 レンダラ(`scripts/render_demo_video_runanchor.py --audio-dir <dir>`)に差し込める。
 
 収録の指針: 各シーンの尺は「音声長+1.2s」で自動決まる。短い=テンポ良くなる。
-下げないこと: 句読点の間(ピリオド後は一拍)。TTSなら en-US 自然声、rate ~175wpm が映像と合う。
+下げないこと: 句読点の間(ピリオド後は一拍)。TTSなら en-US 自然声、rate ~178wpm が映像と合う。
 
 ---
 
@@ -32,7 +32,7 @@ a false success claim — rejected — and a verified fix, adopted.
 ```
 Not a self-report. A verifiable record. Provider-issued operation
 and image IDs, stream fingerprints, and the decision:
-adopted only after replay verifies.
+adopted after replay verifies.
 ```
 (claims表 #3 + #4)
 

@@ -7,8 +7,10 @@ ffmpeg assembles an H.264+AAC mp4 (YouTube-compatible).
 Deps (NOT package deps — submission tooling only):
     pip install Pillow   ·   ffmpeg   ·   macOS `say`
 
-Inputs are real artifacts: terminal text is captured verbatim from
-`runanchor demo/list/show` on a fixture ledger; measured numbers are the v3
+Inputs are real artifacts: terminal text is reconstructed from real captured
+`runanchor demo/list/show` output on a fixture ledger — field names and order
+preserved, long hashes elided with "…" and some fields omitted for screen
+space (the "== DEMO receipt" banner is verbatim). Measured numbers are the v3
 bench values also printed in README/form-answers. Narration lines must stay
 inside submit/narration-claims.md (claims SSOT) — each is tagged below.
 
@@ -101,14 +103,15 @@ def term_window(lines: list[list[tuple[str, str]]], title: str) -> Image.Image:
     for r, row in enumerate(lines):
         x = TERM_X + 44
         y = ty + 90 + r * LINE_H
-        hl = next((s for t, s in row if s.startswith("hl")), None)
         for t, s in row:
-            color = style_color.get(s.replace("hl", ""), TEXT)
+            hl = s.endswith("hl")
+            color = style_color.get(s[:-2] if hl else s, TEXT)
+            tw = text_size(d, t, font(27, mono=True))[0]
             if hl:
-                d.rounded_rectangle([x - 12, y - 4, x + text_size(d, t, font(27, True))[0] + 12,
-                                     y + LINE_H - 10], radius=8, outline=CYAN, width=2)
+                d.rounded_rectangle([x - 12, y - 4, x + tw + 12, y + LINE_H - 10],
+                                    radius=8, outline=CYAN, width=2)
             d.text((x, y), t, font=font(27, mono=True), fill=color)
-            x += text_size(d, t, font(27, mono=True))[0]
+            x += tw
     return img
 
 
@@ -131,7 +134,7 @@ NARR = {
        "record — not the agent's self report. Three runs: a real failure, a "
        "false success claim — rejected — and a verified fix, adopted.",        # claim 2
     3: "Not a self report. A verifiable record. Provider issued operation and "
-       "image IDs, stream fingerprints, and the decision: adopted only after "
+       "image IDs, stream fingerprints, and the decision: adopted after "
        "replay verifies.",                                                    # claim 3+4
     4: "Two independent checks. Replay forks the recorded start image and "
        "reruns the command — a reported but not run claim cannot survive "
@@ -169,14 +172,14 @@ def scene2() -> list[tuple[Image.Image, float]]:
     L = [[(PROMPT, "green"), ("runanchor demo", "")]]
     L += [
         [("[DEMO] image selected: ", "dim"), ("demo:base-image", "cyan")],
-        [("[DEMO] run 1: ", "dim"), ("status=FAILED", "red"), (" exit=1  receipt=22395c62", "dim")],
-        [("[DEMO] run 2: ", "dim"), ("status=FAILED", "red"), (" exit=1  receipt=29626b97", "dim")],
-        [("[DEMO] run 3: ", "dim"), ("status=SUCCESS", "green"), (" exit=0 receipt=3843d895", "dim")],
+        [("[DEMO] run 1: ", "dim"), ("status=FAILED", "red"), (" exit=1  receipt=22395c62 (op=demo-op-1)", "dim")],
+        [("[DEMO] run 2: ", "dim"), ("status=FAILED", "red"), (" exit=1  receipt=29626b97 (op=demo-op-2)", "dim")],
+        [("[DEMO] run 3: ", "dim"), ("status=SUCCESS", "green"), (" exit=0 receipt=3843d895 (op=demo-op-3)", "dim")],
         [("[DEMO] verify 3843d895: ", "dim"), ("match", "green")],
-        [("[DEMO] hidden oracle on result image: ", "dim"), ("pass", "green")],
+        [("[DEMO] hidden oracle on result image: ", "dim"), ("pass (op=demo-op-3-oracle)", "green")],
         [("[DEMO] rejected 29626b97 ", "red"), ("(false success claim)", "orange")],
         [("[DEMO] adopted 3843d895", "green")],
-        [("[DEMO] ledger: 3 receipts | ", "dim"), ("adopted=1", "green"), (" ", "dim"), ("rejected=1", "red")],
+        [("[DEMO] ledger: 3 receipts | ", "dim"), ("adopted=1", "green"), (" ", "dim"), ("rejected=1", "red"), ("  (the rest remain pending on the ledger)", "dim")],
     ]
     return reveal_frames(L, "runanchor — demo (offline fixtures)")
 
@@ -184,9 +187,9 @@ def scene2() -> list[tuple[Image.Image, float]]:
 def scene3() -> list[tuple[Image.Image, float]]:
     # list output
     A = [[(PROMPT, "green"), ("runanchor list", "")],
-         [("22395c62  demo-fix-sort#1  ", "dim"), ("FAILED", "red"), ("   exit=1  state=pending", "dim")],
-         [("29626b97  demo-fix-sort#2  ", "dim"), ("FAILED", "red"), ("   exit=1  state=rejected", "orange")],
-         [("3843d895  demo-fix-sort#3  ", "dim"), ("SUCCESS", "green"), ("  exit=0  state=adopted", "green")]]
+         [("22395c62  demo-fix-sort#1  ", "dim"), ("FAILED", "red"), ("   exit=1  state=pending ", "dim"), ("[DEMO]", "dim")],
+         [("29626b97  demo-fix-sort#2  ", "dim"), ("FAILED", "red"), ("   exit=1  state=rejected ", "orange"), ("[DEMO]", "dim")],
+         [("3843d895  demo-fix-sort#3  ", "dim"), ("SUCCESS", "green"), ("  exit=0  state=adopted ", "green"), ("[DEMO]", "dim")]]
     # show output — real fields, order preserved, long hashes elided with …
     B = [[(PROMPT, "green"), ("runanchor show 3843d895", "")],
          [("== DEMO receipt (fixture-anchored, not a live run) ==", "yellow")],
@@ -196,7 +199,7 @@ def scene3() -> list[tuple[Image.Image, float]]:
          [("operation_uuid: ", "dim"), ("demo-op-3", "cyanhl")],
          [("image_uuid: ", "dim"), ("img-demo-b", "cyanhl"), ("   result_image_uuid: ", "dim"), ("img-demo-c", "cyanhl")],
          [("stdout_sha256: ", "dim"), ("76085f31727816f3fbe1…", "")],
-         [("decision: ", "dim"), ("{'by': 'human', 'reason': 'replay verified', …}", "hl")],
+         [("decision: ", "dim"), ("{'by': 'human', 'reason': 'replay verified', …}", "cyanhl")],
          [("…", "dim")]]
     fa = reveal_frames(A, "runanchor — receipts on the ledger")
     fb = reveal_frames(B, "runanchor — one receipt, provider-anchored")
@@ -277,9 +280,11 @@ def scene5() -> list[tuple[Image.Image, float]]:
                    font=font(26, mono=True), fill=TEXT)
             d.text((bx2[0] + 34, y + 300), "the one miss: contract impossible by design",
                    font=font(26, mono=True), fill=DIM)
-            center_text(d, 720, "$ runanchor check — ok: 291 snapshots / 219 receipts, hash chain intact",
+            center_text(d, 700, "$ runanchor check --ledger eval/bench-ledger-20260930-v3.jsonl",
+                        font(24, mono=True), DIM)
+            center_text(d, 742, "ok: 291 snapshots / 219 receipts, hash chain intact",
                         font(26, mono=True), CYAN)
-            center_text(d, 780, "small sample — corpus, judge prompt and commands are in the repo",
+            center_text(d, 800, "small sample — corpus, judge prompt and commands are in the repo",
                         font(24), DIM)
         else:
             d.rounded_rectangle(bx2, radius=18, outline=BORDER, width=2)

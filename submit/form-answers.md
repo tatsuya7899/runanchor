@@ -62,7 +62,8 @@ OWNER ACTION REQUIRED — URL to be added once the video is uploaded
 **Video file ready: `submit/runanchor-demo.mp4`** (2:03, 1920×1080 H.264+AAC,
 TTS narration — rendered by `scripts/render_demo_video_runanchor.py`, no
 screen capture needed; re-render or hand-record to replace).
-script: submit/demo-script.md · narration claims: submit/narration-claims.md
+script: submit/narration-text.md (rendered cut) · storyboard: submit/demo-script.md
+· narration claims: submit/narration-claims.md
 
 ============================================================
 Repository URL (public, OSS license)
