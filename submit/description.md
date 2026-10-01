@@ -29,7 +29,7 @@ hash-chained ledger — evidence that never silently disappears.
   "reported-but-not-run" claims that look perfect in a log; the hidden oracle
   catches "green-but-wrong" states that look perfect even in a real log.
 - **Measured, not asserted**: sensitivity/specificity are measured on a
-  published labeled corpus (24 seeded-trap cases + 11 clean controls) where
+  published labeled corpus (39 seeded-trap cases + 15 clean controls) where
   the ground truth is executable — the oracle's exit code on the produced
   state, not the planted label. Two layers are reported separately: judge on
   evidence alone, and judge + replay + oracle. The full measurement — corpus,

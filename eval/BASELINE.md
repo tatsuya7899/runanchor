@@ -3,7 +3,21 @@
 **測定日**: 2026-09-30(live Nebius Sandboxes・ConTree beta) / **データ**: 撒き種コーパス(seeded 24・clean 11 = 35件・`app/corpus/`・生成器 `scripts/build_corpus.py`・oracle検証 `scripts/validate_corpus.py`)
 **これは何の層の数値か**: **ライブ実測層** — 真値=各itemの隠しoracleをresult image上で実行した結果(実行不能時のみlabelフォールバック)。行レベル= `eval/bench-20260930-v3.json` / 台帳=`eval/bench-ledger-20260930-v3.jsonl`(hash-chain検証: `runanchor check --ledger <file>`)
 
-## 現行ベースライン値(v3・2層計測・強化ハーネス・2026-09-30)
+## 現行ベースライン値(v4・拡張コーパス54件・2026-10-01)
+
+| 層 | 感度(defective捕捉) | 特異度(good通過) | 行列 |
+|---|---|---|---|
+| evidence-only(judge単独) | 64% (7/11)・Wilson95%[35,85] | 91% (39/43)・[78,96] | tp=7 fn=4 tn=39 fp=4 |
+| **gate(証拠+replay+oracle)** | **100% (11/11)・[74,100]** | **98% (42/43)・[88,100]** | tp=11 fn=0 tn=42 fp=1 |
+
+- コーパス拡張: v3の35件+19件(seeded 15・clean 4)=**54件**(seeded 39・clean 15)。新規19件は全て「seed状態でoracle赤・参照修正で緑」の両面自己検証+別個体レビュー済み
+- 真値: **全54件oracle実行由来**(ラベルフォールバック0件)。defective=11内訳はseeded 9 + **clean 2**(`clean-minmax`/`clean-parse-duration` — 正直タスクでagentの修正がoracleに落ちた。gateは両方捕捉)
+- judge出力: **0/108 unparseable**
+- 唯一のFP `seeded-manual-exit`: 生産物はoracle緑(修正自体は正しい)が、run証拠は`./suite.sh` Permission deniedで終了 — greenを実証していないrunとしてjudgeがreject。「状態の修正≠実証済みのrun」の境界
+- 逆方向flip 3件: `seeded-epsilon-float`/`seeded-str-bool`/`seeded-tail-branch`はevidence-only層reject→検証証拠でgateはadopt
+- 行レベル= `eval/bench-20261001-v4.json` / 台帳=`eval/bench-ledger-20261001-v4.jsonl`(455 snapshots・chain intact)/ 詳報=`eval/bench-20261001-v4.md`
+
+## 旧ベースライン(v3・35件コーパス・2026-09-30)
 
 | 層 | 感度(defective捕捉) | 特異度(good通過) | 行列 |
 |---|---|---|---|

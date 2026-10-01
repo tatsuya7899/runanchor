@@ -259,7 +259,7 @@ def scene5() -> list[tuple[Image.Image, float]]:
     def draw(full: bool) -> Image.Image:
         img, d = new_frame()
         center_text(d, 90, "measured, not asserted", font(48), TEXT)
-        center_text(d, 160, "54-run labeled corpus · live Nebius Sandboxes · 2026-10-01",
+        center_text(d, 160, "54-item labeled corpus · live Nebius Sandboxes · 2026-10-01",
                     font(26), DIM)
         y = 270
         bx = (TERM_X, y, TERM_X + 700, y + 380)

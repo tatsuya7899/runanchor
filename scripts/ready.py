@@ -76,8 +76,8 @@ def main() -> int:
         seeded = sum(1 for i in items if i.label == "seeded")
         clean = sum(1 for i in items if i.label == "clean")
         check("corpus loads cleanly", True, f"{len(items)} items")
-        check("corpus size >= 24 seeded + 11 clean",
-              seeded >= 24 and clean >= 11, f"seeded={seeded} clean={clean}")
+        check("corpus size >= 39 seeded + 15 clean",
+              seeded >= 39 and clean >= 15, f"seeded={seeded} clean={clean}")
         check("every seeded item declares bug_type + oracle",
               all(i.bug_type and i.oracle for i in items if i.label == "seeded"))
         check("every item ships a runnable hidden oracle",

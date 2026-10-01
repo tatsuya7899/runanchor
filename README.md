@@ -184,7 +184,9 @@ places:
 Everything needed is in this repo:
 
 ```bash
-python3 scripts/build_corpus.py        # regenerate the labeled corpus (35 items)
+python3 scripts/build_corpus.py        # regenerates the original 35 items
+                                       # (v4's +19 are committed as files;
+                                       #  the bench auto-scans app/corpus/)
 python3 scripts/bench_live_runanchor.py \
     --planner-model nvidia/nemotron-3-super-120b-a12b \
     --judge-model nvidia/Nemotron-3_5-Lightning \
@@ -192,9 +194,10 @@ python3 scripts/bench_live_runanchor.py \
     --ledger eval/bench-ledger-new.jsonl --out eval/bench-new.json
 ```
 
-- corpus: `app/corpus/` — 24 seeded-trap cases + 11 clean controls, each with
-  `label.json` (label, bug_type, mode, oracle description), a `seed/`
-  workspace, and a hidden `oracle/` test suite the agent never sees
+- corpus: `app/corpus/` — 39 seeded-trap cases + 15 clean controls (54
+  total), each with `label.json` (label, bug_type, mode, oracle
+  description), a `seed/` workspace, and a hidden `oracle/` test suite the
+  agent never sees
 - judge prompt: `app/runanchor/judge.py` (`JUDGE_SYSTEM`)
 - decision rule: the judge sees receipt evidence only (task, every run's
   command/exit code/stdout+stderr tails, unresolved flag) plus — at the gate
