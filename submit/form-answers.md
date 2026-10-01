@@ -57,10 +57,12 @@ now retried and counted separately).
 ============================================================
 Demo video (YouTube URL)
 ============================================================
-OWNER ACTION REQUIRED — URL to be added once the video is recorded and
-uploaded (external publish needs explicit human approval).
+OWNER ACTION REQUIRED — URL to be added once the video is uploaded
+(external publish needs explicit human approval).
+**Video file ready: `submit/runanchor-demo.mp4`** (2:03, 1920×1080 H.264+AAC,
+TTS narration — rendered by `scripts/render_demo_video_runanchor.py`, no
+screen capture needed; re-render or hand-record to replace).
 script: submit/demo-script.md · narration claims: submit/narration-claims.md
-· recorder: scripts/record_demo.py
 
 ============================================================
 Repository URL (public, OSS license)
