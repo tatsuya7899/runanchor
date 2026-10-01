@@ -35,7 +35,8 @@ judge). Python, MIT license.
 Measured results (if the form has a results/metrics field)
 ============================================================
 Gate (evidence + replay + hidden oracle): sensitivity **100% (5/5)**,
-specificity **97% (29/30)**.
+specificity **97% (29/30)** — Wilson 95% CIs [57%, 100%] and [83%, 99%]
+respectively.
 Evidence-only judge baseline on the same 35 run series: 60% (3/5) / 93%
 (28/30) — verification turned two green-looking misses into catches; the
 single false reject is a task-soundness boundary (the contract was
@@ -45,10 +46,14 @@ against the produced result image (defective=5, good=30 — the planted label
 is only a fallback, used once). The oracle mounts outside the workspace at
 an unpredictable path under an isolated `python3 -I -S` runner, so the
 agent's own files cannot shadow or poison the check.
-Cost: sandbox free during beta, ≤10 model calls per item (planner ≤8 +
-judge ×2). Measured 2026-09-30 on live Nebius Sandboxes; every run, replay
-and oracle execution is anchored to a ConTree operation UUID in
-eval/bench-ledger-20260930-v3.jsonl (hash-chain check: `runanchor check`).
+Cost: 287 distinct anchored sandbox operations (219 run + 34 replay + 34
+oracle) across 291 ledger snapshots — $0 during the ConTree beta; ≤8
+planner iterations per item + 70 judge calls — est. < $1 at Token Factory
+list prices (per-token metering not recorded; assumption stated in
+eval/bench-20260930-v3.md). Measured 2026-09-30 on live Nebius
+Sandboxes; every run, replay and oracle execution is anchored to a ConTree
+operation UUID in eval/bench-ledger-20260930-v3.jsonl (hash-chain check:
+`runanchor check`).
 Caveats stated plainly: 5/5 is "every defective run the corpus produced",
 not a rate guarantee at scale; judge-output health is disclosed — 0/70
 unparseable verdicts (an earlier harness run had 6/70 fail-safe rejects,

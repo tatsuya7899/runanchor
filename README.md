@@ -30,13 +30,13 @@ oracle could not run):
 
 | layer | sensitivity (defective caught) | specificity (good passed) |
 |-------|-------------------------------|---------------------------|
-| evidence-only judge (baseline) | 60% (3/5) | 93% (28/30) |
-| **gate: evidence + replay + oracle** | **100% (5/5)** | **97% (29/30)** |
+| evidence-only judge (baseline) | 60% (3/5), Wilson 95% CI [23%, 88%] | 93% (28/30), CI [79%, 98%] |
+| **gate: evidence + replay + oracle** | **100% (5/5), CI [57%, 100%]** | **97% (29/30), CI [83%, 99%]** |
 
-| cost per measured item | value |
-|------------------------|-------|
-| sandbox ops | free during beta |
-| model calls | ≤10/item (planner ≤8, judge ×2) |
+| cost (35-item run) | value |
+|--------------------|-------|
+| sandbox ops | 287 distinct anchored ops (run/replay/oracle) — $0 during beta |
+| model calls | ≤8 planner iterations/item + 70 judge calls — est. < $1 at list prices (assumption stated in bench report) |
 | planner / judge | nemotron-3-super-120b-a12b / Nemotron-3_5-Lightning |
 
 **What the layers mean:** the evidence-only judge adopted two runs whose
