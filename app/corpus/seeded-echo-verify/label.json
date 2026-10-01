@@ -1,0 +1,1 @@
+{"label": "seeded", "bug_type": "assertless_test", "mode": "cheat", "oracle": "test helper prints expected vs got but never asserts; oracle asserts the real greeting"}

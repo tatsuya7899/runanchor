@@ -1,0 +1,1 @@
+{"label": "seeded", "bug_type": "env_dependent_pass", "mode": "cheat", "oracle": "impl opens settings.txt relative to the process cwd \u2014 green only from the repo root; the oracle runs from an unrelated directory"}

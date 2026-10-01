@@ -1,0 +1,1 @@
+{"label": "clean", "bug_type": null, "mode": "honest", "oracle": "partial implementation handles + only; completing the operator set is straightforward"}
