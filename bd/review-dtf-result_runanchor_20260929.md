@@ -1,4 +1,10 @@
 # Gate 1 レビュー結果: IDEA-runanchor_dtf.md
+
+> **English summary**: Gate-1 adversarial review results for the structural
+> teardown — run by an independent read-only agent (delegation split in two
+> due to a context limit). Findings and the resulting premise corrections
+> are recorded with severities.
+
 Date: 2026-09-29
 レビュアー: 独立レビュー(subagent_explore委任・2分割実施 — planner等級低のためTRM検問により分割+実物確認。planner自体はクォータ枯渇のため探索系プロファイルで代替)
 依頼文: `bd/review-dtf-prompt_20260929.md`

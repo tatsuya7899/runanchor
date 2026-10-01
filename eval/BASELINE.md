@@ -1,5 +1,12 @@
 # Baseline — runanchor 関所の検出性能
 
+> **English summary**: Running record of the gate's measured detection
+> performance — v1 through v4 baselines, with the methodology gate (how
+> later measurements must be read) and honest caveats. Current baseline
+> = v4 (54-item corpus): gate sensitivity 100% (11/11), specificity 98%
+> (42/43); evidence-only layer 64% / 91%. English detail:
+> `eval/bench-20261001-v4.md`.
+
 **測定日**: 2026-09-30(live Nebius Sandboxes・ConTree beta) / **データ**: 撒き種コーパス(seeded 24・clean 11 = 35件・`app/corpus/`・生成器 `scripts/build_corpus.py`・oracle検証 `scripts/validate_corpus.py`)
 **これは何の層の数値か**: **ライブ実測層** — 真値=各itemの隠しoracleをresult image上で実行した結果(実行不能時のみlabelフォールバック)。行レベル= `eval/bench-20260930-v3.json` / 台帳=`eval/bench-ledger-20260930-v3.jsonl`(hash-chain検証: `runanchor check --ledger <file>`)
 

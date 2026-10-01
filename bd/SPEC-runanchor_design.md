@@ -1,5 +1,13 @@
 # runanchor — 設計
 
+> **English summary**: Design — receipt schema (task, commands, exit codes,
+> stream fingerprints, ConTree operation/image UUIDs), append-only
+> hash-chained ledger, replay verification (fork the recorded start image,
+> rerun, compare fingerprints), hidden-oracle verification (tests the agent
+> never saw, mounted outside the workspace under an isolated interpreter),
+> evidence sanitization, and the two-layer measured gate (evidence-only
+> judge vs evidence + replay + oracle).
+
 **前提**: SPEC-runanchor_requirements.md(レビュー済・[要確認]残り0件)
 **日付**: 2026-09-29
 

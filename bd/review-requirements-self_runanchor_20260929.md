@@ -1,5 +1,10 @@
 # 要件段レビュー記録 — SPEC-runanchor_requirements(段1)
 
+> **English summary**: Stage-1 (requirements) review record — self-review
+> under a separated create/verify procedure after the review-agent quota
+> was exhausted; the stage-2 mandatory gate covered the requirements
+> document as well. The fallback and its reasoning are logged.
+
 **日付**: 2026-09-29 / **方式**: **セルフレビュー(作成と検証の分離手順)** — Plan agent委任を試みたがサブエージェント週次クォータ枯渇(trace 0ebe41951e55bae133cde6c22fb07e50)のため、Studio規約のcloudフォールバック(作成者と別手順での検証)で代替。**独立レビューとしては段2(設計)の必須ゲートで代替される**(段2レビューは要件書も対象に含まれる)。
 **判定**: 追補(P0×0 / P1×1 / P2×3) → 全件反映済み
 

@@ -1,5 +1,10 @@
 # レビュー依頼: runanchor 構造破壊分析(Gate 1)
 
+> **English summary**: The exact adversarial-review prompt sent to an
+> independent reviewer at Gate 1 — instructing them to break the structural
+> teardown rather than defend it. Kept verbatim so the review protocol
+> itself is inspectable.
+
 あなたはこのプロジェクトの敵対的レビュアーです。**壊す側の立場**で読んでください。提案を守る・補強するのは依頼者の仕事です。あなたの仕事は崩れる箇所を特定することです。
 
 ## 対象(全てReadして引用せよ。引用なき指摘は無効)

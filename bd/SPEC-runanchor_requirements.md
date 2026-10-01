@@ -1,5 +1,12 @@
 # runanchor — 要件
 
+> **English summary**: Requirements — what the gate must do. Every receipt
+> must reference a provider-issued execution record; adoption requires
+> human or measured-machine approval; rejected claims and failures stay in
+> an append-only hash-chained ledger; a fully offline demo mode must exist.
+> Self-reviewed 2026-09-29 (independent review deferred to the stage-2 gate
+> due to quota exhaustion — recorded in the file).
+
 **状態**: レビュー済(セルフ・2026-09-29。サブエージェントクォータ枯渇のため独立レビューは段2ゲートで代替)
 **日付**: 2026-09-29  **親**: bd/IDEA-runanchor_premises.md(Gate 0承認済み・本プロジェクトのSPEC-initial相当)
 

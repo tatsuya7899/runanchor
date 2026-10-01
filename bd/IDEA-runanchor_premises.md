@@ -1,4 +1,13 @@
 # 事業設計 前提整理: runanchor(エージェント作業の「検収書」関所) ※旧名agent-receipt・v1.2で改名
+
+> **English summary**: Premises for the business design — an approval gate
+> that anchors each coding-agent run to provider-issued execution records
+> (ConTree operation UUIDs) before adoption. All external premises verified
+> (Token Factory Sandboxes, ConTree, 7,000+ preloaded SWE environments,
+> $50 credit, deadline, track text). Gate-0 adversarial review folded in
+> (six P1s): receipt anchors, measurement subject definition, prior-art
+> citations, per-run cost measurement, minimum agent quality.
+
 Created: 2026-09-29 / モード: 早駆け(Phase 0圧縮)
 **v1.1(同日)**: Gate 0敵対的レビュー(判定「追補」・P1×6)を反映。外部前提は全件正確と検証済み(Token Factory Sandboxes実在・ConTree・7,000+ SWE環境プリロード・クレジット$50・締切・トラック文逐語一致)。修正点: CI差分の再記述・receipt外部アンカー・計量主体の定義・先行技術の引用・課金実測・エージェント最低品質。
 **v1.2(同日)**: 課題フレーミングの敵対的レビュー(判定「追補・条件付き承認」)を反映。**改名 `agent-receipt` → `runanchor`**(npm/GitHubで4重占有を実測発見)。課題を3層構造に再定義・先行技術スイープにreceipt系クラスタ9件を追記・問題の質6属性を新設。詳細は末尾の追補2を参照。

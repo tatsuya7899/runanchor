@@ -1,4 +1,12 @@
 # 構造破壊分析: runanchor(エージェント出力の検収関所)
+
+> **English summary**: Structural teardown of the concept — deliberately
+> tries to break the idea before building it. Tests the load-bearing
+> assumptions (what a receipt must prove, where verification can be
+> gamed, why "tests pass" is not evidence), and maps failure modes that
+> later became corpus trap families. Borrowed structures from finance,
+> logistics, medicine, and bug bounties.
+
 Created: 2026-09-29
 Input: bd/IDEA-runanchor_premises.md(v1.3・Gate 0承認済み)
 走行: 早駆けモード宣言済みだったがPhase 1を遡行実行(CEO指示・「イノベーションはここから出る」)。Gate 1独立レビュー済・追補1適用済、利用者承認待ち

@@ -1,5 +1,12 @@
 # runanchor — プロジェクト作業指示
 
+> **English**: Working instructions for this repository — a submission for
+> the Nebius × NVIDIA Global AI Hackathon (deadline 2026-10-30 10:00 PDT),
+> Coding & Agentic Engineering track. Submission artifacts are English;
+> internal design records (bd/, research/, eval/BASELINE.md) are bilingual
+> — an English summary leads each document. No secrets in commits; external
+> operations (publishing, billing) require owner approval.
+
 Nebius × NVIDIA Global AI Hackathon(締切 2026-10-30 10:00 PDT・約10/31 02:00 JST)への提出用repo。Coding & Agentic Engineering トラック。Studio憲法(`~/Developer/AGENTS.md`)に従う。
 
 ## 何を外に出すか

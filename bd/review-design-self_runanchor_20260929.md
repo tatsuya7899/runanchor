@@ -1,5 +1,11 @@
 # 設計段レビュー記録 — SPEC-runanchor_design(段2)
 
+> **English summary**: Stage-2 (design) review record — self-review under
+> a separated create/verify procedure because the review-agent quota was
+> exhausted; a fallback explicitly logged with instructions to re-run an
+> independent review when quota recovered (later superseded by the
+> independent reviews recorded in review-impl-result and the corpus review).
+
 **日付**: 2026-09-29 / **方式**: **セルフレビュー(作成と検証の分離手順)** — Plan agent必須ゲートだがサブエージェント週次クォータ枯渇が継続中のためフォールバック。クォータ復帰後に独立レビューを再実施すること(再委任の指針は本ファイル末尾)。
 **判定**: 追補(P0×0 / P1×1 / P2×5) → 全件反映済み
 

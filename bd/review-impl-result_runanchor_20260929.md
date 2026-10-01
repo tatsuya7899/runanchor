@@ -1,5 +1,11 @@
 # 実装レビュー結果(敵対的) — 2026-09-29
 
+> **English summary**: Adversarial review of the implementation by an
+> independent read-only agent (no shared context with the author). Records
+> findings and their dispositions — including one P0 (an unverified
+> assumption about the replay API, resolved by live measurement) and
+> harness-level defects found and fixed before the benchmark.
+
 - **レビュー経路**: `subagent_explore`(plannerのモデルクォータ枯渇のため、規約改訂後の第1代替=Devin内read-onlyプロファイル。コンテキスト非共有)
 - **対象**: app/runanchor/*.py + app/tests/*(コミット `595120e` 時点)・bd/SPEC-runanchor_requirements.md / _design.md・researchノート突合
 - **総合判定**: **不合格(P0あり)** — P0-1は「-D再実行でresult_image_uuidが返る」未検証前提。前提が実測で正しければ「修正要(P1群のみ)」に格下げ

@@ -1,5 +1,11 @@
 # SESSION-HANDOFF — runanchor 全記録(2026-09-29時点)
 
+> **English summary**: Session handoff log as of 2026-09-29 — everything
+> completed offline while the Sandboxes beta approval was pending: full
+> implementation, three adversarial review rounds, the 35-item corpus, and
+> submission text. The only blocker at that point was the beta-approval
+> email (later resolved; see eval/bench-*.md for the live results).
+
 **1行**: Sandboxesベータ承認待ちのまま、オフラインで組める全実装・敵対的レビュー3ラウンド・コーパス35件・提出物文面・棚卸し修正を完了。残ブロッカーはベータ承認メールのみ。
 
 ---

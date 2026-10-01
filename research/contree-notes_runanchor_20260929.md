@@ -1,4 +1,11 @@
 # ConTree API 実測調査 — runanchor 設計用メモ
+
+> **English summary**: Field notes on the ConTree/Nebius Sandboxes API —
+> CLI surface, client models, operation/image lifecycle, pricing, and
+> account approval steps. Written before live access; the "unverified"
+> markers were superseded by the live benchmarks in eval/ (v1–v4), which
+> exercised exactly these APIs.
+
 Created: 2026-09-29 / 出所: contree-cli 0.9.4(`contree agent`全量)+contree-client 0.4.0 `models.py`+公式docs(tokenfactory.nebius.com/sandboxes)。**実アカウント実行は未検証**(メンテ中・APIキー未発行のため)。実行確認が取れたら本ファイルに追補する。
 
 ## 1. 検収書に刻めるもの(OperationResponse・models.py実物)

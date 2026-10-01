@@ -1,4 +1,6 @@
-# bd/ — design history (日本語)
+# bd/ — design history (日本語・English)
+
+このディレクトリは設計の作業記録(前提整理・要件/設計/タスク仕様・敵対的レビュー・セッション引継ぎ)を保持します。本文はプロジェクト規約により**日本語**、各文書の冒頭に **English summary** を併記しています。
 
 This directory holds the project's working design record: premises,
 requirements/design/tasks specs, adversarial reviews, and the session

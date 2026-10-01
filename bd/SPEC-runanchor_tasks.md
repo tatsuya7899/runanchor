@@ -1,5 +1,10 @@
 # runanchor — タスク
 
+> **English summary**: Implementation task breakdown derived from the
+> design — CLI surface (run/list/show/verify/check/demo/bench), ledger,
+> verifier, corpus builder and validator, offline test suite, and the
+> submission packaging checks.
+
 **前提**: SPEC-runanchor_design.md(セルフレビュー通過・独立レビューはクォータ復帰後に再実施予定)
 **日付**: 2026-09-29
 
