@@ -48,9 +48,9 @@ an unpredictable path under an isolated `python3 -I -S` runner, so the
 agent's own files cannot shadow or poison the check.
 Cost: 287 distinct anchored sandbox operations (219 run + 34 replay + 34
 oracle) across 291 ledger snapshots — $0 during the ConTree beta; ≤8
-planner iterations per item + 70 judge calls — est. < $1 at Token Factory
-list prices (per-token metering not recorded; assumption stated in
-eval/bench-20260930-v3.md). Measured 2026-09-30 on live Nebius
+planner iterations per item + 70 judge calls — measured billing: **$0.30
+total project inference to date** (Token Factory console, 09-01→10-01;
+breakdown in eval/bench-20260930-v3.md). Measured 2026-09-30 on live Nebius
 Sandboxes; every run, replay and oracle execution is anchored to a ConTree
 operation UUID in eval/bench-ledger-20260930-v3.jsonl (hash-chain check:
 `runanchor check`).

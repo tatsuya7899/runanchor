@@ -36,7 +36,7 @@ oracle could not run):
 | cost (35-item run) | value |
 |--------------------|-------|
 | sandbox ops | 287 distinct anchored ops (run/replay/oracle) — $0 during beta |
-| model calls | ≤8 planner iterations/item + 70 judge calls — est. < $1 at list prices (assumption stated in bench report) |
+| model calls | measured billing: $0.30 total project inference to date (console, 09-01→10-01) |
 | planner / judge | nemotron-3-super-120b-a12b / Nemotron-3_5-Lightning |
 
 **What the layers mean:** the evidence-only judge adopted two runs whose
