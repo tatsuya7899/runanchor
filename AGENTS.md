@@ -42,4 +42,4 @@ Nebius × NVIDIA Global AI Hackathon(締切 2026-10-30 10:00 PDT・約10/31 02:0
 
 - 事業設計スキル: `~/.agents/skills/business-design/`(成果物は `bd/` に置く)
 - 提出物規約の正本: `~/Developer/_ops/docs/SUBMISSION_WORK_CHECKLIST_20260926.md`
-- 勝者の作法: `~/Developer/_ops/docs/REF-hackathon-winners-playbook_20260927.md`
+- 勝者の作法: `~/Developer/_ops/docs/ref/REF-hackathon-winners-playbook_20260927.md`
