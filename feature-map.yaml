@@ -1,0 +1,6 @@
+# Studio feature-map — SPEC-studio-verify-convention_20260920.md
+flows:
+  - id: primary
+    name: "runanchor primary flow (receipt→replay→human/measured approval→append-only ledger)"
+    how: "pytest suite exercises verification pipeline and ledger checks offline"
+    verify: "scripts/verify"
