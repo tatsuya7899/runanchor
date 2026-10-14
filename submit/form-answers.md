@@ -82,9 +82,9 @@ fail-safe rejects, now retried and counted separately).
 ============================================================
 Demo video (YouTube URL)
 ============================================================
-https://youtu.be/Z-NM0GLORFA   (OWNER: replace — upload the new mp4 and put
-the new URL here; the old rendered video did not satisfy the "footage of the
-project functioning on the device" rule)
+https://youtu.be/2t0kjMcWIm0   (uploaded 2026-10-14 — real Terminal.app
+window capture; replaces the earlier rendered video which did not satisfy
+the "footage of the project functioning on the device" rule)
 
 **Video file: `submit/runanchor-demo.mp4`** (1:41, 1920×1080 H.264+AAC,
 narration by owner — REAL screen capture of `runanchor demo|list|show|check`
