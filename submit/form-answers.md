@@ -88,10 +88,12 @@ project functioning on the device" rule)
 
 **Video file: `submit/runanchor-demo.mp4`** (1:41, 1920×1080 H.264+AAC,
 narration by owner — REAL screen capture of `runanchor demo|list|show|check`
-and committed eval artifacts running in Terminal.app, recorded via ffmpeg
-AVFoundation on this Mac; rebuilt 2026-10-14 after Devpost flagged the
-rendered version. Source capture script: /tmp/ra-capture/run.sh — regenerate
-by re-running the capture driver in a clean terminal).
+and committed eval artifacts running in Terminal.app, recorded as a
+window-scoped ScreenCaptureKit capture on this Mac so no unrelated UI can
+appear; rebuilt 2026-10-14 after Devpost flagged the rendered version.
+Reproduce: scripts/record_demo_capture.sh (Terminal driver) +
+scripts/capture_terminal_window.swift (window recorder) +
+scripts/assemble_demo_video.sh (assembly).
 script: submit/narration-text.md · storyboard: submit/demo-script.md
 · narration claims: submit/narration-claims.md
 
