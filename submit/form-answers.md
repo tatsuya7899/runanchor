@@ -82,12 +82,17 @@ fail-safe rejects, now retried and counted separately).
 ============================================================
 Demo video (YouTube URL)
 ============================================================
-https://youtu.be/Z-NM0GLORFA
+https://youtu.be/Z-NM0GLORFA   (OWNER: replace — upload the new mp4 and put
+the new URL here; the old rendered video did not satisfy the "footage of the
+project functioning on the device" rule)
 
-**Video file: `submit/runanchor-demo.mp4`** (2:04, 1920×1080 H.264+AAC,
-narration by owner — rendered by `scripts/render_demo_video_runanchor.py`,
-no screen capture needed; re-render to replace).
-script: submit/narration-text.md (rendered cut) · storyboard: submit/demo-script.md
+**Video file: `submit/runanchor-demo.mp4`** (1:41, 1920×1080 H.264+AAC,
+narration by owner — REAL screen capture of `runanchor demo|list|show|check`
+and committed eval artifacts running in Terminal.app, recorded via ffmpeg
+AVFoundation on this Mac; rebuilt 2026-10-14 after Devpost flagged the
+rendered version. Source capture script: /tmp/ra-capture/run.sh — regenerate
+by re-running the capture driver in a clean terminal).
+script: submit/narration-text.md · storyboard: submit/demo-script.md
 · narration claims: submit/narration-claims.md
 
 ============================================================
